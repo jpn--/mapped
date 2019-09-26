@@ -22,6 +22,7 @@ requirements:
     - appdirs
     - joblib
     - requests
+    - plotly >=4.1
   test:
     - pytest
 

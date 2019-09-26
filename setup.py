@@ -15,7 +15,7 @@ setup(
     name='mapped',
     version='19.5.0',
 
-    description='Simplification layer for generating pretty maps using geopandas and matplotlib',
+    description='Simplification layer for generating pretty maps using geopandas and matplotlib or plotly',
     long_description=long_description,
 
     # The project's main homepage.
@@ -34,7 +34,7 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='geopandas, matplotlib, maps',
+    keywords='geopandas, matplotlib, maps, plotly',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
@@ -52,6 +52,7 @@ setup(
         'appdirs',
         'joblib',
         'requests',
+        'plotly>=4.1',
     ],
 
 )
