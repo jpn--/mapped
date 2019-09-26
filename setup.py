@@ -4,6 +4,24 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 from os import path
+import os
+import re
+from setuptools import setup, find_packages
+
+def version(path):
+    """Obtain the packge version from a python file e.g. pkg/__init__.py
+    See <https://packaging.python.org/en/latest/single_source_version.html>.
+    """
+    here = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(here, path), encoding='utf-8') as f:
+        version_file = f.read()
+    version_match = re.search(r"""^__version__ = ['"]([^'"]*)['"]""",
+                              version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+
+VERSION = version('mapped/__init__.py')
 
 here = path.abspath(path.dirname(__file__))
 
@@ -13,7 +31,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='mapped',
-    version='19.5.0',
+    version=VERSION,
 
     description='Simplification layer for generating pretty maps using geopandas and matplotlib or plotly',
     long_description=long_description,
