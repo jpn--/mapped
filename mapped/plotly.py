@@ -32,17 +32,19 @@ def good_zoom(gdf, low_tiles=1, high_tiles=3):
 
 def make_plotly_choropleth(
 		gdf,
-		column,
+		column=None,
 		colorscale="Viridis",
 		zmin=None,
 		zmax=None,
-		marker_opacity=0.5,
-		marker_line_width=0,
+		opacity=0.5,
+		line_width=0,
 		center=None,
 		zoom='auto',
 		mapbox_style="carto-positron",
 		margins=0,
 		figuretype=None,
+		show_colorbar=None,
+		**kwargs,
 ):
 	"""
 	Make a choropleth in a plotly FigureWidget.
@@ -51,10 +53,11 @@ def make_plotly_choropleth(
 	----------
 	gdf: geopandas.GeoDataFrame
 		The areas to plot.
-	column:
+	column: Any or pandas.Series, optional
 		The name of the column in `gdf` that contains the data to
 		colorize the areas, or a Series of values to use that is
-		indexed-alike with `gdf`.
+		indexed-alike with `gdf`.  If not given, all-zero data
+		will be used.
 	colorscale: str, default "Viridis"
 		A plotly-compatible colorscale.
 	zmin, zmax: float, optional
@@ -79,6 +82,14 @@ def make_plotly_choropleth(
 	figuretype: class, optional
 		Which plotly figure class to use, defaults to
 		plotly.go.FigureWidget.
+	show_colorbar: bool, optional
+		Whether to show the colorbar legend.  If not given explicitly,
+		this will be set to True unless there is no `column`, in which
+		case it will be False.
+
+	Other keyword arguments are passed through to the
+	plotly Choroplethmapbox constructor, allowing substantial customization
+	of the resulting figure.
 
 	Returns
 	-------
@@ -93,6 +104,8 @@ def make_plotly_choropleth(
 
 	if column is None:
 		column = np.zeros_like(gdf.index)
+		if show_colorbar is None:
+			show_colorbar = False
 
 	z = column
 	try:
@@ -102,17 +115,30 @@ def make_plotly_choropleth(
 		pass
 
 	try:
+		locations = z.index
+	except:
+		locations = gdf.index
+
+	index_name = None
+	try:
+		index_name = locations.name
+	except:
+		pass
+	if index_name is not None:
+		index_name = f"{index_name} "
+	else:
+		index_name = ""
+
+	try:
 		name = z.name
 	except:
 		pass
 	else:
 		if name:
-			hovertemplate = f"{name}: %{{z}}<extra>%{{location}}</extra>"
+			hovertemplate = f"{name}: %{{z}}<extra>{index_name}%{{location}}</extra>"
 
-	try:
-		locations = z.index
-	except:
-		locations = gdf.index
+	if show_colorbar is None:
+		show_colorbar = True
 
 	fig = figuretype(
 		go.Choroplethmapbox(
@@ -122,9 +148,11 @@ def make_plotly_choropleth(
 			colorscale=colorscale,
 			zmin=zmin,
 			zmax=zmax,
-			marker_opacity=marker_opacity,
-			marker_line_width=marker_line_width,
+			marker_opacity=opacity,
+			marker_line_width=line_width,
 			hovertemplate=hovertemplate,
+			showscale=show_colorbar,
+			**kwargs,
 		)
 	)
 
@@ -141,7 +169,7 @@ def make_plotly_choropleth(
 	fig.update_layout(
 		mapbox_style=mapbox_style,
 		mapbox_zoom=zoom,
-		mapbox_center=center
+		mapbox_center=center,
 	)
 	if isinstance(margins, int):
 		fig.update_layout(margin={"r": margins, "t": margins, "l": margins, "b": margins})
