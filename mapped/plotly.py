@@ -53,8 +53,8 @@ def make_plotly_choropleth(
 		The areas to plot.
 	column:
 		The name of the column in `gdf` that contains the data to
-		colorize the areas, or a vector of values to use that
-		matches up with `gdf`.
+		colorize the areas, or a Series of values to use that is
+		indexed-alike with `gdf`.
 	colorscale: str, default "Viridis"
 		A plotly-compatible colorscale.
 	zmin, zmax: float, optional
@@ -109,10 +109,15 @@ def make_plotly_choropleth(
 		if name:
 			hovertemplate = f"{name}: %{{z}}<extra>%{{location}}</extra>"
 
+	try:
+		locations = z.index
+	except:
+		locations = gdf.index
+
 	fig = figuretype(
 		go.Choroplethmapbox(
 			geojson=gdf.__geo_interface__,
-			locations=gdf.index,
+			locations=locations,
 			z=z,
 			colorscale=colorscale,
 			zmin=zmin,
