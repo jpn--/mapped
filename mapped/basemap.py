@@ -74,7 +74,7 @@ def add_basemap(
 		ax,
 		zoom='auto',
 		max_tiles=20,
-		tiles='http://tile.stamen.com/terrain/tileZ/tileX/tileY.png',
+		tiles='http://tile.stamen.com/terrain/{z}/{x}/{y}.png',
 		crs=None,
 		epsg=None,
 		axis='off',
@@ -123,7 +123,41 @@ def add_basemap(
 	AxesSubplot
 	"""
 
-	url = getattr(ctx.sources, tiles, tiles)
+	providers = None
+	if isinstance(tiles, str):
+		providers = ctx.providers
+		tiles_dots = tiles.split('.')
+		while len(tiles_dots):
+			if tiles_dots[0] in providers:
+				providers = providers[tiles_dots[0]]
+				try:
+					tiles_dots = tiles_dots[1:]
+				except IndexError:
+					tiles_dots = []
+			else:
+				providers = None
+				break
+		while isinstance(providers, dict) and 'url' not in providers and len(providers):
+			providers = next(iter(providers.values()))
+		if not isinstance(providers, dict) or len(providers) == 0:
+			providers = None
+
+	if providers is not None:
+		url = providers
+		attribution_txt = providers.get('attribution', None)
+	else:
+		url = getattr(ctx.sources, tiles, tiles)
+		attribution_txt = None
+
+	if attribution_txt is None:
+		if 'openstreetmap.org' in url:
+			attribution_txt = (
+				"""Map tiles and data by OpenStreetMap, under ODbL."""
+			)
+		elif 'stamen.com' in url:
+			attribution_txt = (
+				"""Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL."""
+			)
 
 	xmin, xmax = ax.get_xlim()
 	ymin, ymax = ax.get_ylim()
@@ -153,26 +187,6 @@ def add_basemap(
 	# restore original x/y limits
 	ax.axis((xmin, xmax, ymin, ymax))
 
-	if 'openstreetmap.org' in url:
-		attribution_html = (
-			"""Map tiles and data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under """
-			"""<a href="http://www.openstreetmap.org/copyright">ODbL</a>."""
-		)
-		attribution_txt = (
-			"""Map tiles and data by OpenStreetMap, under ODbL."""
-		)
-	elif 'stamen.com' in url:
-		attribution_html = (
-			"""Map tiles by <a href="http://stamen.com">Stamen Design</a>, """
-			"""under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. """
-			"""Data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under """
-			"""<a href="http://www.openstreetmap.org/copyright">ODbL</a>."""
-		)
-		attribution_txt = (
-			"""Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL."""
-		)
-	else:
-		attribution_txt = None
 
 	if attribution_txt:
 		ax.annotate(
@@ -196,6 +210,82 @@ def add_basemap(
 
 
 def _plot_with_basemap(self, *args, basemap=False, **kwargs, ):
+	"""
+	Plot a GeoDataFrame.
+
+	Generate a plot of a GeoDataFrame with matplotlib.  If a
+	column is specified, the plot coloring will be based on values
+	in that column.
+
+	Parameters
+	----------
+	df : GeoDataFrame
+		The GeoDataFrame to be plotted.  Currently Polygon,
+		MultiPolygon, LineString, MultiLineString and Point
+		geometries can be plotted.
+	column : str, np.array, pd.Series (default None)
+		The name of the dataframe column, np.array, or pd.Series to be plotted.
+		If np.array or pd.Series are used then it must have same length as
+		dataframe. Values are used to color the plot. Ignored if `color` is
+		also set.
+	cmap : str (default None)
+		The name of a colormap recognized by matplotlib.
+	color : str (default None)
+		If specified, all objects will be colored uniformly.
+	ax : matplotlib.pyplot.Artist (default None)
+		axes on which to draw the plot
+	cax : matplotlib.pyplot Artist (default None)
+		axes on which to draw the legend in case of color map.
+	categorical : bool (default False)
+		If False, cmap will reflect numerical values of the
+		column being plotted.  For non-numerical columns, this
+		will be set to True.
+	legend : bool (default False)
+		Plot a legend. Ignored if no `column` is given, or if `color` is given.
+	scheme : str (default None)
+		Name of a choropleth classification scheme (requires mapclassify).
+		A mapclassify.MapClassifier object will be used
+		under the hood. Supported are all schemes provided by mapclassify (e.g.
+		'BoxPlot', 'EqualInterval', 'FisherJenks', 'FisherJenksSampled',
+		'HeadTailBreaks', 'JenksCaspall', 'JenksCaspallForced',
+		'JenksCaspallSampled', 'MaxP', 'MaximumBreaks',
+		'NaturalBreaks', 'Quantiles', 'Percentiles', 'StdMean',
+		'UserDefined'). Arguments can be passed in classification_kwds.
+	k : int (default 5)
+		Number of classes (ignored if scheme is None)
+	vmin : None or float (default None)
+		Minimum value of cmap. If None, the minimum data value
+		in the column to be plotted is used.
+	vmax : None or float (default None)
+		Maximum value of cmap. If None, the maximum data value
+		in the column to be plotted is used.
+	markersize : str or float or sequence (default None)
+		Only applies to point geometries within a frame.
+		If a str, will use the values in the column of the frame specified
+		by markersize to set the size of markers. Otherwise can be a value
+		to apply to all points, or a sequence of the same length as the
+		number of points.
+	figsize : tuple of integers (default None)
+		Size of the resulting matplotlib.figure.Figure. If the argument
+		axes is given explicitly, figsize is ignored.
+	legend_kwds : dict (default None)
+		Keyword arguments to pass to ax.legend()
+	classification_kwds : dict (default None)
+		Keyword arguments to pass to mapclassify
+	basemap : dict or bool, default False
+		Whether to render a basemap behind the plot.
+
+	**style_kwds : dict
+		Color options to be passed on to the actual plot function, such
+		as ``edgecolor``, ``facecolor``, ``linewidth``, ``markersize``,
+		``alpha``.
+
+	Returns
+	-------
+	ax : matplotlib axes instance
+
+	"""
+
 	ax = gpd.geodataframe.plot_dataframe(self, *args, **kwargs)
 	if isinstance(basemap, str):
 		basemap = {'crs': self.crs, 'tiles':basemap}
