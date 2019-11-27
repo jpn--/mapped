@@ -9,11 +9,14 @@ source:
 
 build:
   noarch: python
+  number: 0
+  script: "{{ PYTHON }} -m pip install . -vv"
 
 requirements:
   build:
     - python
     - setuptools
+    - pip
   run:
     - python >=3.7
     - matplotlib >=3.0
