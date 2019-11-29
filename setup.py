@@ -66,7 +66,7 @@ setup(
     install_requires=[
         'geopandas>=0.5',
         'matplotlib>=3.0',
-        'contextily',
+        'contextily>=1.0',
         'appdirs',
         'joblib',
         'requests',
