@@ -15,8 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from  .basemap import make_basemap, add_basemap
+from .basemap import make_basemap, add_basemap
 from .plotly import make_plotly_choropleth
 from . import caching
+from .dotdensity import generate_points_in_areas
 
 __version__ = "19.11.0"

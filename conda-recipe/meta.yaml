@@ -21,7 +21,7 @@ requirements:
     - python >=3.7
     - matplotlib >=3.0
     - geopandas >=0.5
-    - contextily
+    - contextily >=1.0
     - appdirs
     - joblib
     - requests
