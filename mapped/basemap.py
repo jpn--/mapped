@@ -10,7 +10,7 @@ def make_basemap(
 		*,
 		tiles=None,
 		zoom='auto',
-		max_tiles=20,
+		max_tiles=10,
 		crs=None,
 		epsg=None,
 ):
@@ -296,3 +296,52 @@ def _plot_with_basemap(self, *args, basemap=False, **kwargs, ):
 	return ax
 
 gpd.GeoDataFrame.plot = _plot_with_basemap
+
+def _plot_series_with_basemap(self, *args, basemap=False, **kwargs, ):
+	"""
+	Plot a GeoSeries.
+
+	Generate a plot of a GeoSeries geometry with matplotlib.
+
+	Parameters
+	----------
+	s : Series
+	    The GeoSeries to be plotted. Currently Polygon,
+	    MultiPolygon, LineString, MultiLineString and Point
+	    geometries can be plotted.
+	cmap : str (default None)
+	    The name of a colormap recognized by matplotlib. Any
+	    colormap will work, but categorical colormaps are
+	    generally recommended. Examples of useful discrete
+	    colormaps include:
+
+	        tab10, tab20, Accent, Dark2, Paired, Pastel1, Set1, Set2
+
+	color : str (default None)
+	    If specified, all objects will be colored uniformly.
+	ax : matplotlib.pyplot.Artist (default None)
+	    axes on which to draw the plot
+	figsize : pair of floats (default None)
+	    Size of the resulting matplotlib.figure.Figure. If the argument
+	    ax is given explicitly, figsize is ignored.
+	basemap : dict or bool, default False
+		Whether to render a basemap behind the plot.
+	**style_kwds : dict
+	    Color options to be passed on to the actual plot function, such
+	    as ``edgecolor``, ``facecolor``, ``linewidth``, ``markersize``,
+	    ``alpha``.
+
+	Returns
+	-------
+	ax : matplotlib axes instance
+	"""
+	ax = gpd.geoseries.plot_series(self, *args, **kwargs)
+	if isinstance(basemap, str):
+		basemap = {'crs': self.crs, 'tiles':basemap}
+	if basemap is True or basemap is 1:
+		basemap = {'crs': self.crs}
+	if basemap:
+		ax = add_basemap( ax, **basemap )
+	return ax
+
+gpd.GeoSeries.plot = _plot_series_with_basemap
