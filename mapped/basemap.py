@@ -78,7 +78,7 @@ def add_basemap(
 		crs=None,
 		epsg=None,
 		axis='off',
-		figsize=(10, 10),
+		figsize=None,
 ):
 	"""
 	Add a basemap to a matplotlib map plot.
@@ -286,6 +286,10 @@ def _plot_with_basemap(self, *args, basemap=False, **kwargs, ):
 
 	"""
 
+	if 'ax' in kwargs:
+		crs = getattr(kwargs['ax'], 'crs', None)
+		if crs is not None:
+			self = self.to_crs(crs)
 	ax = gpd.geodataframe.plot_dataframe(self, *args, **kwargs)
 	if isinstance(basemap, str):
 		basemap = {'crs': self.crs, 'tiles':basemap}
@@ -335,6 +339,10 @@ def _plot_series_with_basemap(self, *args, basemap=False, **kwargs, ):
 	-------
 	ax : matplotlib axes instance
 	"""
+	if 'ax' in kwargs:
+		crs = getattr(kwargs['ax'], 'crs', None)
+		if crs is not None:
+			self = self.to_crs(crs)
 	ax = gpd.geoseries.plot_series(self, *args, **kwargs)
 	if isinstance(basemap, str):
 		basemap = {'crs': self.crs, 'tiles':basemap}
