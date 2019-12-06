@@ -7,6 +7,97 @@ from sklearn.base import clone
 from matplotlib import pyplot as plt
 from .basemap import add_basemap
 
+
+class GeoMeshGrid(gpd.GeoDataFrame):
+	"""A GeoDataFrame that contains a grid of points."""
+
+	def __init__(self, bounds, num=50, crs=None, numx=None, numy=None, resolution=None, ):
+		if isinstance(bounds, (np.ndarray, list, tuple)) and len(bounds) == 4:
+			x0, y0, x1, y1 = bounds
+		else:
+			x0, y0, x1, y1 = bounds.total_bounds
+
+		if crs is None and hasattr(bounds, 'crs'):
+			crs = bounds.crs
+
+		if resolution is not None:
+			xy_ratio = (x1 - x0) / (y1 - y0)
+			numy = int(np.sqrt((resolution ** 2) / xy_ratio))
+			numx = int((resolution ** 2) / numy)
+
+		if numx is None:
+			numx = num
+		if numy is None:
+			numy = num
+
+		gX, gY = np.meshgrid(
+			np.linspace(x0, x1, numx),
+			np.linspace(y0, y1, numy),
+		)
+
+		super().__init__(
+			geometry=gpd.points_from_xy(gX.ravel(), gY.ravel()),
+			crs=crs,
+			index=pd.DataFrame(gX).stack().index,
+		)
+
+		self.gridshape = (numy, numx)
+
+	def contour(
+			self,
+			column,
+			ax=None,
+			levels=None,
+			filled=False,
+			basemap=None,
+			crs=None,
+			figsize=None,
+			mask=None,
+			column_mask=None,
+			**kwargs,
+	):
+		shape = self.gridshape
+
+		if ax is None:
+			fig, ax = plt.subplots(figsize=figsize)
+
+		func = ax.contourf if filled else ax.contour
+
+		try:
+			z = self[column]
+		except KeyError:
+			z = self.eval(column)
+
+		if column_mask is not None:
+			z[~(self.eval(column_mask))] = np.nan
+
+		if mask is not None:
+			if isinstance(mask, (gpd.GeoSeries, gpd.GeoDataFrame)):
+				mask = self.within(mask.unary_union)
+
+			z = z.copy()
+			z[~mask] = np.nan
+
+		func(
+			self.geometry.x.values.reshape(shape),
+			self.geometry.y.values.reshape(shape),
+			z.values.reshape(shape),
+			levels=levels,
+			**kwargs,
+		)
+
+		if crs is None:
+			crs = getattr(self, 'crs', crs)
+
+		if isinstance(basemap, str):
+			basemap = {'crs': crs, 'tiles': basemap}
+		if basemap is True or basemap is 1:
+			basemap = {'crs': crs}
+		if basemap:
+			ax = add_basemap(ax, **basemap)
+
+		return ax
+
 def meshgrid(bounds, num=50, crs=None, numx=None, numy=None, resolution=None):
 	"""Create a grid of points as a GeoDataFrame."""
 
@@ -137,7 +228,7 @@ class GeoKernelDensities(dict):
 				raise ValueError("crs must be set if ax is given and bounds are not")
 
 		if mesh is None:
-			mesh, shape = meshgrid(bounds, resolution=resolution, crs=crs)
+			mesh = GeoMeshGrid(bounds, resolution=resolution, crs=crs)
 
 		mesh = self(mesh, copy=False)
 
@@ -148,15 +239,15 @@ class GeoKernelDensities(dict):
 
 class GeoKernelDensity(KernelDensity):
 
-	def __init__(self, bandwidth=1.0,
-				 atol=0, rtol=0,
-				 breadth_first=True, leaf_size=40, metric_params=None):
+	def __init__(self, bandwidth=1.0, algorithm='auto',
+                 kernel='gaussian', metric="haversine", atol=0, rtol=0,
+                 breadth_first=True, leaf_size=40, metric_params=None):
 		bw = bandwidth
 		if bandwidth is None:
 			bandwidth = 1.0
 		super().__init__(
-			bandwidth=bandwidth, algorithm='ball_tree',
-			kernel='gaussian', metric="haversine",
+			bandwidth=bandwidth, algorithm=algorithm,
+			kernel=kernel, metric=metric,
 			atol=atol, rtol=rtol,
 			breadth_first=breadth_first, leaf_size=leaf_size, metric_params=metric_params
 		)
