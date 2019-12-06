@@ -204,6 +204,8 @@ def add_basemap(
 	if figsize:
 		ax.get_figure().set_size_inches(figsize)
 
+	ax.crs = crs if crs is not None else {'init': f'epsg:3897'}
+
 	return ax
 
 

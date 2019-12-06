@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+import warnings
 from sklearn.neighbors import KernelDensity
 from sklearn.base import clone
 from matplotlib import pyplot as plt
@@ -41,7 +42,9 @@ class GeoMeshGrid(gpd.GeoDataFrame):
 			index=pd.DataFrame(gX).stack().index,
 		)
 
-		self.gridshape = (numy, numx)
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+			self.gridshape = (numy, numx)
 
 	def contour(
 			self,
@@ -338,6 +341,9 @@ class GeoKernelDensity(KernelDensity):
 				ax=None, figsize=None, filled=False,
 				basemap=None, crs=None, **kwargs
 				):
+
+		if crs is None:
+			crs = getattr(ax, 'crs', None)
 
 		if bounds is None and ax is not None:
 			x0,x1 = ax.get_xlim()
