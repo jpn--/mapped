@@ -100,16 +100,17 @@ def make_plotly_choropleth(
 		figuretype = go.FigureWidget
 
 	gdf = gdf.to_crs(epsg=4326)
-	hovertemplate = f"%{{z}}<extra>%{{location}}</extra>"
+	hovertemplate_left = f"%{{z}}"
 
 	if column is None:
 		column = np.zeros_like(gdf.index)
 		if show_colorbar is None:
 			show_colorbar = False
+		hovertemplate_left = ""
 
 	z = column
 	try:
-		if column in gdf:
+		if isinstance(gdf, gpd.GeoDataFrame) and column in gdf:
 			z = gdf[column]
 	except:
 		pass
@@ -129,13 +130,18 @@ def make_plotly_choropleth(
 	else:
 		index_name = ""
 
+	hovertemplate_right = f"<extra>{index_name}%{{location}}</extra>"
+
 	try:
 		name = z.name
 	except:
 		pass
 	else:
 		if name:
-			hovertemplate = f"{name}: %{{z}}<extra>{index_name}%{{location}}</extra>"
+			hovertemplate_left = f"{name}: %{{z}}"
+
+	if hovertemplate_left == "":
+		hovertemplate_right = f"{index_name}%{{location}}<extra></extra>"
 
 	if show_colorbar is None:
 		show_colorbar = True
@@ -150,7 +156,7 @@ def make_plotly_choropleth(
 			zmax=zmax,
 			marker_opacity=opacity,
 			marker_line_width=line_width,
-			hovertemplate=hovertemplate,
+			hovertemplate=hovertemplate_left+hovertemplate_right,
 			showscale=show_colorbar,
 			**kwargs,
 		)
@@ -180,7 +186,7 @@ def make_plotly_choropleth(
 
 
 gpd.GeoDataFrame.plotly_choropleth = make_plotly_choropleth
-
+gpd.GeoSeries.plotly_choropleth = make_plotly_choropleth
 
 def make_plotly_heatmap(
 		gdf,
@@ -330,3 +336,31 @@ def make_plotly_heatmap(
 gpd.GeoDataFrame.plotly_heatmap = make_plotly_heatmap
 
 
+def make_plotly(gdf):
+	"""
+	A quick and dirty dynamic map to review data.
+
+	Parameters
+	----------
+	gdf : GeoDataFrame or GeoSeries
+
+	Returns
+	-------
+	plotly.go.FigureWidget
+
+	"""
+	if len(gdf):
+		import shapely.geometry.point
+		if isinstance(gdf.iloc[0].geometry, shapely.geometry.point.Point):
+			m = make_plotly_heatmap(
+				gdf
+			)
+		else:
+			m = make_plotly_choropleth(
+				gdf,
+				line_width=2,
+			)
+		return m
+
+gpd.GeoDataFrame.plotly = make_plotly
+gpd.GeoSeries.plotly = make_plotly
