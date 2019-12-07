@@ -291,7 +291,10 @@ def _plot_with_basemap(self, *args, basemap=False, **kwargs, ):
 	if 'ax' in kwargs:
 		crs = getattr(kwargs['ax'], 'crs', None)
 		if crs is not None:
-			self = self.to_crs(crs)
+			try:
+				self = self.to_crs(crs)
+			except:
+				pass
 	ax = gpd.geodataframe.plot_dataframe(self, *args, **kwargs)
 	if isinstance(basemap, str):
 		basemap = {'crs': self.crs, 'tiles':basemap}
@@ -299,6 +302,8 @@ def _plot_with_basemap(self, *args, basemap=False, **kwargs, ):
 		basemap = {'crs': self.crs}
 	if basemap:
 		ax = add_basemap( ax, **basemap )
+	if not hasattr(ax, 'crs') and crs is not None:
+		ax.crs = crs
 	return ax
 
 gpd.GeoDataFrame.plot = _plot_with_basemap
@@ -344,7 +349,10 @@ def _plot_series_with_basemap(self, *args, basemap=False, **kwargs, ):
 	if 'ax' in kwargs:
 		crs = getattr(kwargs['ax'], 'crs', None)
 		if crs is not None:
-			self = self.to_crs(crs)
+			try:
+				self = self.to_crs(crs)
+			except:
+				pass
 	ax = gpd.geoseries.plot_series(self, *args, **kwargs)
 	if isinstance(basemap, str):
 		basemap = {'crs': self.crs, 'tiles':basemap}
@@ -352,6 +360,8 @@ def _plot_series_with_basemap(self, *args, basemap=False, **kwargs, ):
 		basemap = {'crs': self.crs}
 	if basemap:
 		ax = add_basemap( ax, **basemap )
+	if not hasattr(ax, 'crs') and crs is not None:
+		ax.crs = crs
 	return ax
 
 gpd.GeoSeries.plot = _plot_series_with_basemap
