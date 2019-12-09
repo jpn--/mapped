@@ -343,12 +343,10 @@ class GeoKernelDensity(KernelDensity):
 				bounds = self.points.to_crs(crs)
 
 		if mesh is None:
-			mesh, shape = meshgrid(bounds, resolution=resolution, crs=crs)
-		else:
-			shape = None
+			mesh = GeoMeshGrid(bounds, resolution=resolution, crs=crs)
 		mesh = self(mesh, name=name, copy=False)
 
-		return mesh, shape
+		return mesh
 
 
 
