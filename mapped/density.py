@@ -12,8 +12,18 @@ from .basemap import add_basemap
 class GeoMeshGrid(gpd.GeoDataFrame):
 	"""A GeoDataFrame that contains a grid of points."""
 
-	def __init__(self, bounds, num=50, crs=None, numx=None, numy=None, resolution=None, ):
-		if isinstance(bounds, (np.ndarray, list, tuple)) and len(bounds) == 4:
+	def __init__(self, bounds=None, num=50, crs=None, numx=None, numy=None, resolution=None, xlim=None, ylim=None):
+
+		if bounds is None:
+			if isinstance(xlim, slice):
+				x0, x1 = xlim.start, xlim.stop
+			else:
+				x0, x1 = xlim
+			if isinstance(ylim, slice):
+				y0, y1 = ylim.start, ylim.stop
+			else:
+				y0, y1 = ylim
+		elif isinstance(bounds, (np.ndarray, list, tuple)) and len(bounds) == 4:
 			x0, y0, x1, y1 = bounds
 		else:
 			x0, y0, x1, y1 = bounds.total_bounds
