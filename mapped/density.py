@@ -285,7 +285,12 @@ class GeoKernelDensity(KernelDensity):
 		if self.bandwidth is None:
 			self.bandwidth = (len(self.points)**(-1/6) * latlon_radians.std(0).mean())
 
-		super().fit(latlon_radians)
+		if sample_weight is not None and sample_weight.min() <= 0:
+			if sample_weight.max() <= 0:
+				raise ValueError("sample_weight must have some positive values")
+			super().fit(latlon_radians[sample_weight>0,:], sample_weight=sample_weight[sample_weight>0])
+		else:
+			super().fit(latlon_radians, sample_weight=sample_weight)
 		return self
 
 	def multifit(self, X, column, agg=False):
