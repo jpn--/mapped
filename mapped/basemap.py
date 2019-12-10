@@ -461,6 +461,8 @@ def _plot_series_with_basemap(self, *args, basemap=False, **kwargs, ):
 	if basemap is True or basemap is 1:
 		basemap = {'crs': crs}
 	if basemap:
+		if 'crs' not in basemap:
+			basemap['crs'] = crs
 		ax = add_basemap( ax, **basemap )
 	if not hasattr(ax, 'crs') and crs is not None:
 		ax.crs = crs
