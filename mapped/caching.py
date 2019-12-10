@@ -38,6 +38,7 @@ def _get_tile_urls(providers):
 _tile_urls = _get_tile_urls(ctx.providers)
 _nominatim = [
 	"(^https://nominatim.openstreetmap.org/search)",
+	"(^http://overpass-api.de/api)",
 ]
 _map_url_filter = re.compile("|".join(_tile_urls+_nominatim))
 
