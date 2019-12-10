@@ -56,6 +56,7 @@ def make_basemap(
 		crs = {'init': f'epsg:3857'}
 
 	fig, ax = plt.subplots(figsize=figsize)
+	ax.set_aspect("equal")
 	if axis is not None:
 		ax.axis(axis)  # don't show axis?
 	ax.set_xlim(*xlim)
