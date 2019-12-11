@@ -1,4 +1,5 @@
 
+import geopandas as gpd
 
 def centroid_internal(gdf):
 	"""
@@ -19,3 +20,22 @@ def centroid_internal(gdf):
 	points.crs = gdf.crs
 	return points
 
+def make_points_geodataframe(df, lat, lon):
+
+	"""
+	Create a GeoDataFrame from a regular DataFrame that has lat and lon columns.
+
+	Parameters
+	----------
+	df : DataFrame
+	lat, lon : str
+		The column names containing latitude and longitude.
+	"""
+	return gpd.GeoDataFrame(
+		geometry=gpd.points_from_xy(
+			df[lon],
+			df[lat],
+		),
+		data=df,
+		crs={'init': 'epsg:4326'}
+	)
