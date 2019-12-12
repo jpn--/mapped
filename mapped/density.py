@@ -8,14 +8,14 @@ from sklearn.base import clone
 from matplotlib import pyplot as plt
 from .basemap import add_basemap
 
-
 class GeoMeshGrid(gpd.GeoDataFrame):
 	"""
 	A GeoDataFrame that contains a grid of points.
 
 	This is a specially constructed GeoDataFrame that contains
 	points arrayed in a grid, for use in plotting contours,
-	heatmaps, and related visualizations.
+	heatmaps, and related visualizations.  All initialization
+	arguments must be given as keyword parameters.
 
 	Parameters
 	----------
@@ -41,49 +41,59 @@ class GeoMeshGrid(gpd.GeoDataFrame):
 		These can be used intead of the `bounds` argument.
 	"""
 
-	def __init__(self, bounds=None, num=50, crs=None, numx=None, numy=None, resolution=None, xlim=None, ylim=None):
+	_metadata = gpd.GeoDataFrame._metadata + ['gridshape',]
 
-		if bounds is None:
-			if isinstance(xlim, slice):
-				x0, x1 = xlim.start, xlim.stop
-			else:
-				x0, x1 = xlim
-			if isinstance(ylim, slice):
-				y0, y1 = ylim.start, ylim.stop
-			else:
-				y0, y1 = ylim
-		elif isinstance(bounds, (np.ndarray, list, tuple)) and len(bounds) == 4:
-			x0, y0, x1, y1 = bounds
+	def __init__(self, *args, bounds=None, num=50, crs=None, numx=None, numy=None, resolution=None, xlim=None, ylim=None):
+
+		if len(args):
+			super().__init__(*args)
 		else:
-			x0, y0, x1, y1 = bounds.total_bounds
 
-		if crs is None and hasattr(bounds, 'crs'):
-			crs = bounds.crs
+			if bounds is None:
+				if isinstance(xlim, slice):
+					x0, x1 = xlim.start, xlim.stop
+				else:
+					x0, x1 = xlim
+				if isinstance(ylim, slice):
+					y0, y1 = ylim.start, ylim.stop
+				else:
+					y0, y1 = ylim
+			elif isinstance(bounds, (np.ndarray, list, tuple)) and len(bounds) == 4:
+				x0, y0, x1, y1 = bounds
+			else:
+				x0, y0, x1, y1 = bounds.total_bounds
 
-		if resolution is not None:
-			xy_ratio = (x1 - x0) / (y1 - y0)
-			numy = int(np.sqrt((resolution ** 2) / xy_ratio))
-			numx = int((resolution ** 2) / numy)
+			if crs is None and hasattr(bounds, 'crs'):
+				crs = bounds.crs
 
-		if numx is None:
-			numx = num
-		if numy is None:
-			numy = num
+			if resolution is not None:
+				xy_ratio = (x1 - x0) / (y1 - y0)
+				numy = int(np.sqrt((resolution ** 2) / xy_ratio))
+				numx = int((resolution ** 2) / numy)
 
-		gX, gY = np.meshgrid(
-			np.linspace(x0, x1, numx),
-			np.linspace(y0, y1, numy),
-		)
+			if numx is None:
+				numx = num
+			if numy is None:
+				numy = num
 
-		super().__init__(
-			geometry=gpd.points_from_xy(gX.ravel(), gY.ravel()),
-			crs=crs,
-			index=pd.DataFrame(gX).stack().index,
-		)
+			gX, gY = np.meshgrid(
+				np.linspace(x0, x1, numx),
+				np.linspace(y0, y1, numy),
+			)
 
-		with warnings.catch_warnings():
-			warnings.simplefilter("ignore")
-			self.gridshape = (numy, numx)
+			super().__init__(
+				geometry=gpd.points_from_xy(gX.ravel(), gY.ravel()),
+				crs=crs,
+				index=pd.DataFrame(gX).stack().index,
+			)
+
+			with warnings.catch_warnings():
+				warnings.simplefilter("ignore")
+				self.gridshape = (numy, numx)
+
+	@property
+	def _constructor(self):
+		return GeoMeshGrid
 
 	def contour(
 			self,
