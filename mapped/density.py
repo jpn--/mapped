@@ -173,9 +173,9 @@ class GeoKernelDensities(dict):
 			target.geometry.x.values,
 		]).T)
 		for k in self.keys():
-			target_points[k] = np.exp(self[k].score_samples(latlon_radians))
+			target_points[k] = np.exp(self[k].score_samples(latlon_radians)) * self[k].total_sample_weight
 		if hasattr(self, 'agg'):
-			target_points['agg'] = np.exp(self.agg.score_samples(latlon_radians))
+			target_points['agg'] = np.exp(self.agg.score_samples(latlon_radians)) * self.agg.total_sample_weight
 		return target_points
 
 	def meshgrid(
@@ -186,6 +186,7 @@ class GeoKernelDensities(dict):
 			crs=None,
 			mesh=None,
 			total=None,
+			add_prior=0,
 	):
 
 		if mesh is None:
@@ -209,11 +210,25 @@ class GeoKernelDensities(dict):
 
 		mesh = self(mesh, copy=False)
 
-		if total:
+		if add_prior:
+			mesh = self.add_prior(mesh, prior=add_prior, total=total)
+		elif total:
 			mesh[total] = mesh[list(self.keys())].sum(axis=1)
 
 		return mesh
 
+	def add_prior(self, mesh, prior=1, total=None, inplace=False):
+		if not inplace:
+			mesh = mesh.copy()
+		gross_sample_weight = sum(self[k].total_sample_weight for k in self.keys())
+		orig_total = mesh[list(self.keys())].values.sum()
+		prior *= orig_total / gross_sample_weight
+		for k in self.keys():
+			mesh[k] += prior * self[k].total_sample_weight / gross_sample_weight
+		if total:
+			mesh[total] = mesh[list(self.keys())].sum(axis=1)
+		if not inplace:
+			return mesh
 
 class GeoKernelDensity(KernelDensity):
 
@@ -263,9 +278,15 @@ class GeoKernelDensity(KernelDensity):
 		if sample_weight is not None and sample_weight.min() <= 0:
 			if sample_weight.max() <= 0:
 				raise ValueError("sample_weight must have some positive values")
-			super().fit(latlon_radians[sample_weight>0,:], sample_weight=sample_weight[sample_weight>0])
+			use_sample_weight = sample_weight[sample_weight>0]
+			super().fit(latlon_radians[sample_weight>0,:], sample_weight=use_sample_weight)
+			self.total_sample_weight = use_sample_weight.sum()
 		else:
 			super().fit(latlon_radians, sample_weight=sample_weight)
+			if sample_weight is not None:
+				self.total_sample_weight = sample_weight.sum()
+			else:
+				self.total_sample_weight = latlon_radians.shape[0]
 		return self
 
 	def multifit(self, X, column, agg=False):
@@ -291,7 +312,7 @@ class GeoKernelDensity(KernelDensity):
 			target.geometry.x.values,
 		]).T
 		z = np.exp(self.score_samples(np.radians(latlon)))
-		target_points[name] = z
+		target_points[name] = z * self.total_sample_weight
 		return target_points
 
 	def meshgrid(
