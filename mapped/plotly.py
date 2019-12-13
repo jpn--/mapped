@@ -255,7 +255,7 @@ def make_plotly_heatmap(
 		figuretype = go.FigureWidget
 
 	gdf = gdf.to_crs(epsg=4326)
-	hovertemplate = f"%{{z}}<extra>%{{location}}</extra>"
+	hovertemplate = f"%{{z}}<extra>%{{text}}</extra>"
 
 	if column is None:
 		column = np.ones_like(gdf.index)
@@ -290,7 +290,7 @@ def make_plotly_heatmap(
 		pass
 	else:
 		if name:
-			hovertemplate = f"{name}: %{{z}}<extra>{index_name}%{{location}}</extra>"
+			hovertemplate = f"{name}: %{{z}}<extra>{index_name}%{{text}}</extra>"
 
 	if show_colorbar is None:
 		show_colorbar = True
@@ -306,6 +306,7 @@ def make_plotly_heatmap(
 			zmax=zmax,
 			hovertemplate=hovertemplate,
 			showscale=show_colorbar,
+			text=gdf.index.astype(str),
 			**kwargs,
 		)
 	)
