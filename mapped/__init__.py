@@ -21,4 +21,4 @@ from .dotdensity import generate_points_in_areas
 from .simple import centroid_internal, make_points_geodataframe
 from geopandas import GeoDataFrame, GeoSeries
 
-__version__ = "19.12.1"
+__version__ = "20.01.0"

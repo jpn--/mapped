@@ -41,7 +41,7 @@ setup(
 
     # Author details
     author='Jeffrey Newman',
-    author_email='jnewman@camsys.com',
+    author_email='jeff@newman.me',
 
     # Choose your license
     license='GPLv3',
@@ -66,7 +66,7 @@ setup(
     install_requires=[
         'geopandas>=0.5',
         'matplotlib>=3.0',
-        'contextily>=1.0',
+        'contextily>=1.0rc2',
         'appdirs',
         'joblib',
         'requests',
