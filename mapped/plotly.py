@@ -1,8 +1,10 @@
 
 try:
 	import plotly.graph_objects as go
+	import plotly
 except ImportError:
 	go = None
+	plotly = None
 
 import geopandas as gpd
 import contextily as ctx
@@ -28,6 +30,54 @@ def good_zoom(gdf, low_tiles=1, high_tiles=3):
 			low_zoom += 1
 		tiles[zoom] = howmany = ctx.howmany(xmin_, ymin_, xmax_, ymax_, zoom, verbose=False)
 	return zoom - 1 + ((high_tiles - tiles[zoom - 1]) / (howmany - tiles[zoom - 1]))
+
+
+
+
+### Patch for odd error
+def _perform_plotly_relayout(self, relayout_data):
+	"""
+	Perform a relayout operation on the figure's layout data and return
+	the changes that were applied
+	Parameters
+	----------
+	relayout_data : dict[str, any]
+		See the docstring for plotly_relayout
+	Returns
+	-------
+	relayout_changes: dict[str, any]
+		Subset of relayout_data including only the keys / values that
+		resulted in a change to the figure's layout data
+	"""
+	# Initialize relayout changes
+	# ---------------------------
+	# This will be a subset of the relayout_data including only the
+	# keys / values that are changed in the figure's layout data
+	relayout_changes = {}
+
+	# Process each key
+	# ----------------
+	for key_path_str, v in relayout_data.items():
+
+		if not plotly.basedatatypes.BaseFigure._is_key_path_compatible(key_path_str, self.layout):
+			if key_path_str != 'mapbox._derived':
+
+				raise ValueError(
+					"""
+Invalid property path '{key_path_str}' for layout
+""".format(
+						key_path_str=key_path_str
+					)
+				)
+
+		# Apply set operation on the layout dict
+		val_changed = plotly.basedatatypes.BaseFigure._set_in(self._layout, key_path_str, v)
+
+		if val_changed:
+			relayout_changes[key_path_str] = v
+
+	return relayout_changes
+
 
 
 def make_plotly_choropleth(
@@ -181,6 +231,9 @@ def make_plotly_choropleth(
 		fig.update_layout(margin={"r": margins, "t": margins, "l": margins, "b": margins})
 	elif margins is not None:
 		fig.update_layout(margin=margins)
+
+	fig._perform_plotly_relayout = lambda y: _perform_plotly_relayout(fig, y)
+
 	return fig
 
 
