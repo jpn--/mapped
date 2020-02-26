@@ -2,7 +2,7 @@
 import pandas as pd
 import geopandas as gpd
 from larch import OMX
-from ipywidgets import HBox, VBox, Dropdown, Label
+from ipywidgets import HBox, VBox, Dropdown, Label, HTML
 
 class OMXViz(HBox):
     """
@@ -33,7 +33,7 @@ class OMXViz(HBox):
 
         self.shapefile = shapefile
 
-        self.fig = shapefile.plotly_choropleth()
+        self.fig = shapefile.plotly_choropleth(show_colorbar=True)
 
         self.matrix_dropdown = Dropdown(
             # label='Matrix Table',
@@ -46,7 +46,9 @@ class OMXViz(HBox):
 
         self.panel = VBox([
             Label(f"File: {self.omx.filename}"),
-            Label("----"),
+            HTML(
+                value="<hr>",
+            ),
             Label("Matrix Table"),
             self.matrix_dropdown,
             Label("Origin TAZ"),
