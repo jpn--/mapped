@@ -1,6 +1,8 @@
 import contextily as ctx
 import geopandas as gpd
 from matplotlib import pyplot as plt
+from pyproj import CRS
+from rasterio.errors import CRSError
 
 def make_basemap(
 		xlim,
@@ -286,19 +288,26 @@ def add_basemap(
 		crs = {'init': f'epsg:{epsg}'}
 	crs = getattr(ax, 'crs', crs)
 
-	ctx.add_basemap(
-		ax,
-		zoom=zoom,
-		url=url,
-		crs=crs,
-		**kwargs,
-		# interpolation='bilinear',
-		# attribution=None,
-		# attribution_size=8,
-		# reset_extent=True,
-		# resampling= < Resampling.bilinear: 1 >,
-		# ** extra_imshow_args,
-	)
+	try:
+		ctx.add_basemap(
+			ax,
+			zoom=zoom,
+			url=url,
+			crs=crs,
+			**kwargs,
+		)
+	except CRSError as err:
+		epsg = crs.to_epsg()
+		if epsg:
+			ctx.add_basemap(
+				ax,
+				zoom=zoom,
+				url=url,
+				crs=CRS(f"epsg:{epsg}"),
+				**kwargs,
+			)
+		else:
+			raise
 
 	if axis is not None:
 		ax.axis(axis)  # don't show axis
