@@ -210,7 +210,7 @@ def make_basemap(
 def add_basemap(
 		ax,
 		zoom='auto',
-		tiles='Stamen.Terrain',
+		tiles='CartoDB.Positron',
 		crs=None,
 		epsg=None,
 		axis='off',
