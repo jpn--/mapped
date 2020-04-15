@@ -19,6 +19,8 @@ from .plotly import make_plotly_choropleth
 from . import caching
 from .dotdensity import generate_points_in_areas
 from .simple import centroid_internal, make_points_geodataframe
+from .gdf_viewer import GeoDataFrameViz as Viz
+from .omx_viewer import OMXViz
 from geopandas import GeoDataFrame, GeoSeries
 
 __version__ = "20.01.0"
