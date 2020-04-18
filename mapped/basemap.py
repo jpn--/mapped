@@ -385,6 +385,12 @@ def _plot_with_basemap(self, *args, basemap=False, **kwargs, ):
 		Keyword arguments to pass to mapclassify
 	basemap : dict or bool, default False
 		Whether to render a basemap behind the plot.
+	annot : str, np.array, pd.Series (default None)
+		The name of the dataframe column, np.array, or pd.Series used to
+		annotate areas in the plot.
+		If np.array or pd.Series are used then it must have same length as
+		dataframe. Values are used to color the plot. Ignored if `color` is
+		also set.
 
 	**style_kwds : dict
 		Color options to be passed on to the actual plot function, such
