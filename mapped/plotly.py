@@ -15,6 +15,7 @@ import numpy as np
 import os
 
 _MAPBOX_TOKEN_ = None
+DEFAULT_OUTPUT_TYPE = go.FigureWidget
 
 def load_mapbox_token(mapbox_token_file=".mapbox_token"):
 	global _MAPBOX_TOKEN_
@@ -207,7 +208,7 @@ def make_plotly_choropleth(
 			px.set_mapbox_access_token(_MAPBOX_TOKEN_)
 
 	if figuretype is None:
-		figuretype = go.FigureWidget
+		figuretype = DEFAULT_OUTPUT_TYPE
 
 	gdf = gdf.to_crs(epsg=4326)
 
@@ -363,7 +364,7 @@ def make_plotly_heatmap(
 			px.set_mapbox_access_token(_MAPBOX_TOKEN_)
 
 	if figuretype is None:
-		figuretype = go.FigureWidget
+		figuretype = DEFAULT_OUTPUT_TYPE
 
 	gdf = gdf.to_crs(epsg=4326)
 
@@ -514,7 +515,7 @@ def make_plotly_scatter(
 			px.set_mapbox_access_token(_MAPBOX_TOKEN_)
 
 	if figuretype is None:
-		figuretype = go.FigureWidget
+		figuretype = DEFAULT_OUTPUT_TYPE
 
 	gdf = gdf.to_crs(epsg=4326)
 
