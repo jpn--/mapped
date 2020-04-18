@@ -23,4 +23,4 @@ from .gdf_viewer import GeoDataFrameViz as Viz
 from .omx_viewer import OMXViz
 from geopandas import GeoDataFrame, GeoSeries
 
-__version__ = "20.01.0"
+__version__ = "20.04.0"
