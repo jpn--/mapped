@@ -1,5 +1,5 @@
 # Mapped
-# Copyright (C) 2019 Jeffrey Newman
+# Copyright (C) 2020 Jeffrey Newman
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

@@ -61,7 +61,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'mapped'
-copyright = u'2019, Jeffrey Newman'
+copyright = u'2019-20, Jeffrey Newman'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -339,7 +339,7 @@ latex_elements = {
 epub_title = u'mapped'
 epub_author = u'Jeffrey Newman'
 epub_publisher = u'Jeffrey Newman'
-epub_copyright = u'2019, Jeffrey Newman'
+epub_copyright = u'2019-20, Jeffrey Newman'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.
