@@ -292,7 +292,7 @@ def add_basemap(
 		ctx.add_basemap(
 			ax,
 			zoom=zoom,
-			url=url,
+			source=url,
 			crs=crs,
 			**kwargs,
 		)
@@ -302,7 +302,7 @@ def add_basemap(
 			ctx.add_basemap(
 				ax,
 				zoom=zoom,
-				url=url,
+				source=url,
 				crs=CRS(f"epsg:{epsg}"),
 				**kwargs,
 			)
