@@ -229,6 +229,9 @@ def make_plotly_choropleth(
 			lat=(total_bounds[1] + total_bounds[3]) / 2,
 		)
 
+	if isinstance(color, str) and color not in gdf_p.columns:
+		color = gdf_p.eval(color)
+
 	px_choropleth = px.choropleth_mapbox(
 		gdf_p,
 		geojson=gdf.__geo_interface__,
@@ -254,11 +257,11 @@ def make_plotly_choropleth(
 	if text is not None:
 		if isinstance(text, str):
 			if text in gdf:
-				text = gdf[text]
+				text = gdf[text].astype(str)
 			elif text in gdf.index.names:
-				text = gdf.index.get_level_values(text)
+				text = gdf.index.get_level_values(text).astype(str)
 			else:
-				text = gdf.eval(text)
+				text = gdf.eval(text).astype(str)
 		make_plotly_scatter(
 			gdf,
 			text=text,
@@ -431,6 +434,7 @@ def make_plotly_scatter(
 		figuretype=None,
 		fig=None,
 		size=None,
+		color=None,
 		suppress_hover=False,
 		mode=None,
 		**kwargs,
@@ -544,6 +548,9 @@ def make_plotly_scatter(
 	except:
 		zoom = None
 
+	if isinstance(color, str) and color not in gdf_p.columns:
+		color = gdf_p.eval(color)
+
 	px_scatter = px.scatter_mapbox(
 		gdf_p,
 		lat=gdf_p.centroid.y,
@@ -552,6 +559,7 @@ def make_plotly_scatter(
 		zoom=zoom,
 		mapbox_style=mapbox_style,
 		hover_name=gdf_p.index,
+		color=color,
 		**kwargs,
 	)
 	if mode is not None:
