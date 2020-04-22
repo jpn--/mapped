@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .basemap import make_basemap, add_basemap
-from .plotly import make_plotly_choropleth
+from .plotly import plotly_choropleth, plotly_scatter, plotly_heatmap, plotly_lines
 from . import caching
 from .dotdensity import generate_points_in_areas
 from .simple import centroid_internal, make_points_geodataframe
@@ -23,4 +23,4 @@ from .gdf_viewer import GeoDataFrameViz as Viz
 from .omx_viewer import OMXViz
 from geopandas import GeoDataFrame, GeoSeries
 
-__version__ = "20.04.0"
+__version__ = "20.04.01"

@@ -2,7 +2,7 @@
 import pandas as pd
 import geopandas as gpd
 from pandas.api.types import is_numeric_dtype
-from .plotly import make_plotly_choropleth
+from .plotly import plotly_choropleth
 from ipywidgets import HBox, VBox, Dropdown, Label, HTML
 
 import plotly.express.colors
@@ -28,7 +28,7 @@ class GeoDataFrameViz(VBox):
         if color is not None and color not in self.gdf.columns:
             raise KeyError(color)
 
-        self.fig = make_plotly_choropleth(gdf, color=color, color_continuous_scale='Cividis')
+        self.fig = plotly_choropleth(gdf, color=color, color_continuous_scale='Cividis')
 
         self.color_continuous_scale = color_continuous_scale
         self.color_discrete_sequence = color_discrete_sequence
