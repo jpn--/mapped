@@ -1,9 +1,19 @@
 
 import pandas as pd
 import geopandas as gpd
+from pandas.api.types import is_numeric_dtype
+from .plotly import plotly_choropleth
 from ipywidgets import HBox, VBox, Dropdown, Label, HTML
 
-class GeoDataFrameViz(HBox):
+import plotly.express.colors
+def get_color(name):
+    if name.lower() in plotly.express.colors.named_colorscales():
+        return name
+    return getattr(plotly.express.colors.qualitative, name)
+
+
+
+class GeoDataFrameViz(VBox):
     """
     Visualize geo data on an interactive map.
 
@@ -12,18 +22,24 @@ class GeoDataFrameViz(HBox):
     gdf : geopandas.GeoDataFrame
     """
 
-    def __init__(self, gdf):
+    def __init__(self, gdf, color=None, color_continuous_scale='Cividis', color_discrete_sequence='Plotly'):
 
         self.gdf = gdf
+        if color is not None and color not in self.gdf.columns:
+            raise KeyError(color)
 
-        self.fig = gdf.plotly_choropleth(show_colorbar=True)
+        self.fig = plotly_choropleth(gdf, color=color, color_continuous_scale='Cividis')
+
+        self.color_continuous_scale = color_continuous_scale
+        self.color_discrete_sequence = color_discrete_sequence
 
         self.col_dropdown = Dropdown(
-            options=list(self.gdf.columns),
+            options=[i for i in self.gdf.columns if i!='geometry'],
+            value=color,
         )
 
-        self.panel = VBox([
-            Label("Column"),
+        self.panel = HBox([
+            Label("Color"),
             self.col_dropdown,
         ])
 
@@ -55,6 +71,20 @@ class GeoDataFrameViz(HBox):
         if do_update:
             with self.fig.batch_update():
                 self.fig.data[0].z = self.gdf[self.col_name]
+                if is_numeric_dtype(self.gdf[self.col_name]):
+                    self.fig.data[0].colorscale = get_color(self.color_continuous_scale)
+                    self.fig.layout.showlegend = False
+                    self.fig.layout.coloraxis.colorbar.title.text = self.col_name
+                    if len(self.col_name) > 12:
+                        self.fig.layout.coloraxis.colorbar.title.side = 'right'
+                    else:
+                        self.fig.layout.coloraxis.colorbar.title.side = 'top'
+                    self.fig.layout.coloraxis.showscale = True
+                else:
+                    self.fig.data[0].colorscale = get_color(self.color_discrete_sequence)
+                    self.fig.layout.showlegend = True
+                    self.fig.layout.coloraxis.colorbar.title.text = self.col_name
+                    self.fig.layout.coloraxis.showscale = False
 
 
 

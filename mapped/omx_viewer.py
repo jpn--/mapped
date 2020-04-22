@@ -1,7 +1,10 @@
 
 import pandas as pd
 import geopandas as gpd
-from larch import OMX
+try:
+    from larch import OMX
+except:
+    OMX = None
 from ipywidgets import HBox, VBox, Dropdown, Label, HTML
 
 class OMXViz(HBox):
@@ -24,6 +27,8 @@ class OMXViz(HBox):
 
     def __init__(self, omx, shapefile):
 
+        if OMX is None:
+            raise ModuleNotFoundError('larch.omx')
         if isinstance(omx, str):
             omx = OMX(omx, mode='r')
         self.omx = omx
