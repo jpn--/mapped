@@ -195,10 +195,10 @@ def plotly_choropleth(
 		The figure width in pixels.
 	height: int (default `600`)
 		The figure height in pixels.
-
-	Other keyword arguments are passed through to the
-	plotly.express.choropleth_mapbox constructor, allowing substantial
-	further customization of the resulting figure.
+	**kwargs:
+		Other keyword arguments are passed through to the
+		plotly.express.choropleth_mapbox constructor, allowing substantial
+		further customization of the resulting figure.
 
 	Returns
 	-------
@@ -354,10 +354,10 @@ def plotly_heatmap(
 		The figure width in pixels.
 	height: int (default `600`)
 		The figure height in pixels.
-
-	Other keyword arguments are passed through to the
-	plotly.express.scatter_mapbox constructor, allowing substantial
-	further customization of the resulting figure.
+	**kwargs:
+		Other keyword arguments are passed through to the
+		plotly.express.scatter_mapbox constructor, allowing substantial
+		further customization of the resulting figure.
 
 	Returns
 	-------
@@ -506,10 +506,10 @@ def plotly_scatter(
 		The figure width in pixels.
 	height: int (default `600`)
 		The figure height in pixels.
-
-	Other keyword arguments are passed through to the
-	plotly.express.scatter_mapbox constructor, allowing substantial
-	further customization of the resulting figure.
+	**kwargs:
+		Other keyword arguments are passed through to the
+		plotly.express.scatter_mapbox constructor, allowing substantial
+		further customization of the resulting figure.
 
 	Returns
 	-------
@@ -691,12 +691,14 @@ def plotly_lines(
 		The figure width in pixels.
 	height: int (default `600`)
 		The figure height in pixels.
+	**kwargs:
+		Other keyword arguments are passed through to the
+		plotly.express.scatter_mapbox constructor, allowing substantial
+		further customization of the resulting figure.
 
-	Other keyword arguments are passed through to the
-	plotly.express.scatter_mapbox constructor, allowing substantial
-	further customization of the resulting figure.
-
-	A seperate trace is generated for every unique combination of
+	Notes
+	-----
+	A separate trace is generated for every unique combination of
 	color and width, which can create a lot of traces and slow down
 	the responsiveness of the figure.  It is better to use categorical
 	values in these places.
