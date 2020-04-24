@@ -95,3 +95,23 @@ def mad_points(seed=42):
 
     return mad_points
 
+def election():
+    """Load Plotly's example election data as a GeoDataFrame."""
+    import plotly, gzip, os
+    geopath = os.path.join(
+        os.path.dirname(os.path.dirname(plotly.data.__file__)),
+        "package_data",
+        "datasets",
+        "election.geojson.gz",
+    )
+    with gzip.GzipFile(geopath, "r") as f:
+        geo = gpd.read_file(f)
+    return gpd.GeoDataFrame(
+        pd.merge(
+            plotly.data.election(),
+            geo.geometry,
+            left_on='district_id',
+            right_on=geo['id'].astype(int),
+        ),
+        crs=geo.crs,
+    )
