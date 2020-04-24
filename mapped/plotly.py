@@ -121,7 +121,7 @@ def plotly_choropleth(
 		figuretype=None,
 		fig=None,
 		center=None,
-		opacity=0.5,
+		opacity=1.0,
 		text=None,
 		**kwargs,
 ):
