@@ -30,7 +30,7 @@ def make_basemap(
 	tiles: str
 		The base url to use for the map tile, or a named value in
 		contextily.sources, for example: OSM_A, ST_TERRAIN, ST_TONER_LITE.
-		See `https://github.com/darribas/contextily/blob/master/contextily/tile_providers.py`
+		See `https://github.com/geopandas/contextily/blob/master/contextily/_providers.py`
 		for other named values.
 	zoom: int, or 'auto'
 		The zoom level of the map tiles to download.  Note that this does
@@ -97,7 +97,7 @@ def add_basemap(
 	tiles: str
 		The base url to use for the map tile, or a named value in
 		contextily.sources, for example: "OpenStreetMap", "Stamen.Terrain", "Stamen.TonerLite".
-		See `https://github.com/darribas/contextily/blob/master/contextily/_providers.py`
+		See `https://github.com/geopandas/contextily/blob/master/contextily/_providers.py`
 		for other possible values.
 	crs: dict, optional
 		The coordinate reference system of the map being rendered.  Map tiles are
