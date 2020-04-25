@@ -235,7 +235,7 @@ def plotly_choropleth(
 		zoom = None
 
 	if center is None:
-		total_bounds = gdf.total_bounds
+		total_bounds = gdf_p.total_bounds
 		center = dict(
 			lon=(total_bounds[0] + total_bounds[2]) / 2,
 			lat=(total_bounds[1] + total_bounds[3]) / 2,
@@ -246,8 +246,8 @@ def plotly_choropleth(
 
 	px_choropleth = px.choropleth_mapbox(
 		gdf_p,
-		geojson=gdf.__geo_interface__,
-		locations=gdf.index,
+		geojson=gdf_p.__geo_interface__,
+		locations=gdf_p.index,
 		color=color,
 		zoom=zoom,
 		mapbox_style=mapbox_style,
@@ -268,14 +268,14 @@ def plotly_choropleth(
 
 	if text is not None:
 		if isinstance(text, str):
-			if text in gdf:
-				text = gdf[text].astype(str)
-			elif text in gdf.index.names:
-				text = gdf.index.get_level_values(text).astype(str)
+			if text in gdf_p:
+				text = gdf_p[text].astype(str)
+			elif text in gdf_p.index.names:
+				text = gdf_p.index.get_level_values(text).astype(str)
 			else:
-				text = gdf.eval(text).astype(str)
+				text = gdf_p.eval(text).astype(str)
 		plotly_scatter(
-			gdf,
+			gdf_p,
 			text=text,
 			mapbox_style=mapbox_style,
 			fig=fig,
