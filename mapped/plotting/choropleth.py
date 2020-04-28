@@ -380,6 +380,10 @@ def _folium_choropleth(
 		zoom='auto',
 		tiles='CartoDB Positron',
 		ax=None,
+		nan_color="#faded1",
+		line_color='black',
+		hover_line_color='blue',
+		tooltip_fields = None,
 ):
 	import folium
 
@@ -412,16 +416,72 @@ def _folium_choropleth(
 
 	if ax is None:
 		ax = folium.Map(center, zoom_start=zoom, tiles=tiles)
-	folium.Choropleth(
-		geo_data=gdf.__geo_interface__,
-		data=color,
-		key_on='feature.id',
-		fill_color='YlGn',
-		fill_opacity=fill_opacity,
-		line_opacity=line_opacity,
-		line_width=line_width,
-		legend_name=legend_name,
+
+	from branca import colormap
+
+	colormapper = colormap.linear.viridis.scale(
+		color.min(),
+		color.max(),
+	)
+	if legend_name:
+		colormapper.caption = legend_name
+
+	def colormapper_with_nan(x):
+		if nan_color and pd.isna(x):
+			return nan_color
+		else:
+			return colormapper(x)
+
+
+	_tooltip_fields = [color.name]
+	if tooltip_fields is not None:
+		for tt in tooltip_fields:
+			if tt not in _tooltip_fields:
+				_tooltip_fields.append(tt)
+
+	gdf_j = gpd.GeoDataFrame(
+		color.values,
+		index=gdf.index,
+		geometry=gdf.geometry,
+		columns=[color.name],
+	)
+
+	for ttf in _tooltip_fields[1:]:
+		if ttf in gdf.columns:
+			gdf_j[ttf] = gdf[ttf]
+		else:
+			gdf_j[ttf] = gdf.eval(ttf)
+
+
+	folium.GeoJson(
+		gdf_j,
+		style_function=lambda feature: {
+			'fillColor': colormapper_with_nan(feature['properties'][color.name]),
+			'color': line_color,
+			'weight': line_width,
+			'opacity': line_opacity,
+			'fillOpacity': fill_opacity,
+		},
+		highlight_function=lambda feature: {
+			'color': hover_line_color,
+			'weight': line_width+2,
+		},
+		tooltip=folium.GeoJsonTooltip(
+			fields=_tooltip_fields,
+		),
 	).add_to(ax)
+	colormapper.add_to(ax)
+
+	# folium.Choropleth(
+	# 	geo_data=gdf.__geo_interface__,
+	# 	data=color,
+	# 	key_on='feature.id',
+	# 	fill_color='YlGn',
+	# 	fill_opacity=fill_opacity,
+	# 	line_opacity=line_opacity,
+	# 	line_width=line_width,
+	# 	legend_name=legend_name,
+	# ).add_to(ax)
 
 	return ax
 
