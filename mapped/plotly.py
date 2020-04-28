@@ -242,7 +242,8 @@ def plotly_choropleth(
 		)
 
 	if isinstance(color, str) and color not in gdf_p.columns:
-		color = gdf_p.eval(color)
+		color_str = color
+		color = gdf_p.eval(color).rename(color_str)
 
 	px_choropleth = px.choropleth_mapbox(
 		gdf_p,

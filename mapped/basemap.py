@@ -265,16 +265,29 @@ def _plot_with_basemap(self, *args, basemap=False, **kwargs, ):
 	ax : matplotlib axes instance
 
 	"""
-
-	if 'ax' in kwargs:
-		crs = getattr(kwargs['ax'], 'crs', None)
+	ax = kwargs.pop('ax', None)
+	if ax is not None:
+		crs = getattr(ax, 'crs', None)
 		if crs is not None:
 			try:
 				self = self.to_crs(crs)
 			except:
 				pass
 	crs = getattr(self, 'crs', None)
-	ax = gpd.geodataframe.plot_dataframe(self, *args, **kwargs)
+
+	figsize = kwargs.pop('figsize', None)
+	if ax is None:
+		fig, ax = plt.subplots(figsize=figsize)
+	ax.set_aspect("equal")
+
+	try:
+		ax = gpd.geodataframe.plot_dataframe(self, *args, ax=ax, **kwargs)
+	except KeyError:
+		if len(args) > 0:
+			ax = gpd.geodataframe.plot_dataframe(self, self.eval(args[0]), *args[1:], ax=ax, **kwargs)
+		else:
+			column = kwargs.pop('column')
+			ax = gpd.geodataframe.plot_dataframe(self, column=self.eval(column), ax=ax, **kwargs)
 	if isinstance(basemap, str):
 		basemap = {'crs': crs, 'tiles':basemap}
 	if basemap is True or basemap is 1:
