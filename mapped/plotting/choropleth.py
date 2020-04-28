@@ -360,6 +360,70 @@ _plotly_mapbox_styles = {
 	False: 'white-bg',
 }
 
+_folium_tiles = {
+	'CartoDB.Positron': 'CartoDB Positron',
+	'CartoDB.DarkMatter': 'CartoDB dark_matter',
+	'Stamen.Terrain': 'Stamen Terrain',
+	'Stamen.Toner': 'Stamen Toner',
+	'Stamen.Watercolor': 'Stamen Watercolor',
+	'OpenStreetMap': 'OpenStreetMap',
+	True: 'CartoDB Positron',
+}
+
+def _folium_choropleth(
+		gdf,
+		color,
+		fill_opacity=1.0,
+		line_opacity=0.3,
+		line_width=1,
+		legend_name=None,
+		zoom='auto',
+		tiles='CartoDB Positron',
+		ax=None,
+):
+	import folium
+
+	if isinstance(color, str) and legend_name is None:
+		legend_name = color
+
+	try:
+		if zoom == 'auto':
+			zoom = plotly.good_zoom(gdf)+1
+	except:
+		zoom = 8
+
+	gdf = gdf.to_crs(epsg=4326)
+
+	if isinstance(color, str) and color not in gdf.columns:
+		color_str = color
+		color = gdf.eval(color).rename(color_str)
+		color.index = color.index.astype(str)
+	elif color in gdf.columns:
+		color = gdf[color]
+		color.index = color.index.astype(str)
+
+	total_bounds = gdf.total_bounds
+	center = (
+		(total_bounds[1] + total_bounds[3]) / 2,
+		(total_bounds[0] + total_bounds[2]) / 2,
+	)
+
+	tiles = _folium_tiles.get(tiles, tiles)
+
+	if ax is None:
+		ax = folium.Map(center, zoom_start=zoom, tiles=tiles)
+	folium.Choropleth(
+		geo_data=gdf.__geo_interface__,
+		data=color,
+		key_on='feature.id',
+		fill_color='YlGn',
+		fill_opacity=fill_opacity,
+		line_opacity=line_opacity,
+		line_width=line_width,
+		legend_name=legend_name,
+	).add_to(ax)
+
+	return ax
 
 def choropleth(
 		gdf,
@@ -368,6 +432,7 @@ def choropleth(
 		ax=None,
 		fig=None,
 		color=None,
+		opacity=1.0,
 		text=None,
 		basemap=True,
 		zoom='auto',
@@ -392,6 +457,8 @@ def choropleth(
 		Either a name of a column in `gdf`, or a pandas Series or
 		array_like object, or a string that can be evaluated on `gdf`.
 		Values are used to assign color to areas on the map.
+	opacity: float, default 1.0
+		The opacity of the fill areas.
 	text: str or int or Series or array-like, optional
 		Either a name of a column in `gdf`, or a pandas Series or
 		array_like object, or a string that can be evaluated on `gdf`.
@@ -414,10 +481,12 @@ def choropleth(
 	if ax is None:
 		ax = fig
 	if ax is not None:
-		if 'matplotlib' in type(ax):
+		if 'matplotlib' in repr(type(ax)):
 			engine = 'matplotlib'
-		elif 'plotly' in type(ax):
+		elif 'plotly' in repr(type(ax)):
 			engine = 'plotly'
+		elif 'folium' in repr(type(ax)):
+			engine = 'folium'
 
 	if isinstance(color, str) and color not in gdf.columns:
 		color_str = color
@@ -431,9 +500,11 @@ def choropleth(
 			zoom=zoom,
 			figsize=figsize,
 			annot=text,
+			ax=ax,
+			alpha=opacity,
 			**kwargs,
 		)
-	else:
+	elif engine == 'plotly':
 		return _plotly_choropleth(
 			gdf,
 			color=color,
@@ -441,5 +512,20 @@ def choropleth(
 			zoom=zoom,
 			figsize=figsize,
 			text=text,
+			fig=ax,
+			opacity=opacity,
 			**kwargs,
 		)
+	elif engine == 'folium':
+		return _folium_choropleth(
+			gdf,
+			color=color,
+			fill_opacity=opacity,
+			line_opacity=max(opacity,0.3),
+			legend_name=None,
+			zoom=zoom,
+			tiles=basemap,
+			ax=ax,
+		)
+	else:
+		raise ValueError(f"mapping engine '{engine}' not found")
