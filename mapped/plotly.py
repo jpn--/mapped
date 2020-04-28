@@ -107,6 +107,25 @@ Invalid property path '{key_path_str}' for layout
 		if val_changed:
 			relayout_changes[key_path_str] = v
 
+	import logging
+	# logging.getLogger('mapped').critical("_perform_plotly_relayout::"+str(relayout_changes))
+	#logging.getLogger('mapped').critical("self.data::"+str(len(self.data)))
+	if 'mapbox.zoom' in relayout_changes:
+		for trace_n, trace in enumerate(self.data):
+			zoom_visible = True
+			if hasattr(trace, '_minzoom') or hasattr(trace, '_maxzoom'):
+				if hasattr(trace, '_minzoom') and trace._minzoom is not None:
+					if relayout_changes['mapbox.zoom'] < trace._minzoom:
+						zoom_visible = False
+				if hasattr(trace, '_maxzoom') and trace._maxzoom is not None:
+					if relayout_changes['mapbox.zoom'] >= trace._maxzoom:
+						zoom_visible = False
+				#logging.getLogger('mapped').critical(f"self.data[{trace_n}]::checking -> {zoom_visible} on {relayout_changes['mapbox.zoom']} ({trace._minzoom},{trace._maxzoom})")
+				trace.visible = zoom_visible
+			else:
+				pass
+				#logging.getLogger('mapped').critical(f"self.data[{trace_n}]::not checking")
+
 	return relayout_changes
 
 
