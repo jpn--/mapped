@@ -487,8 +487,8 @@ def _folium_choropleth(
 
 def choropleth(
 		gdf,
-		engine='matplotlib',
 		*,
+		engine='matplotlib',
 		ax=None,
 		fig=None,
 		color=None,
