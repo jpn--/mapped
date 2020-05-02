@@ -497,6 +497,7 @@ def choropleth(
 		basemap=True,
 		zoom='auto',
 		figsize=None,
+		missing_value=None,
 		**kwargs
 ):
 	"""
@@ -551,6 +552,20 @@ def choropleth(
 	if isinstance(color, str) and color not in gdf.columns:
 		color_str = color
 		color = gdf.eval(color).rename(color_str)
+	elif isinstance(color, str) and color in gdf.columns:
+		color = gdf[color].copy()
+
+	if missing_value is not None:
+		try:
+			color = color.fillna(missing_value)
+		except:
+			pass
+
+	# Make infinite values in range.
+	lo = color[np.isfinite(color)].min()
+	hi = color[np.isfinite(color)].max()
+	color[np.isposinf(color)] = hi + (hi-lo)*0.05
+	color[np.isneginf(color)] = lo - (hi-lo)*0.05
 
 	if engine == 'matplotlib':
 		return _choropleth_matplotlib(
