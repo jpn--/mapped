@@ -1,4 +1,5 @@
 
+import numpy as np
 import pandas as pd
 import geopandas as gpd
 import plotly.express as px
@@ -9,11 +10,13 @@ DPI = 72
 
 def _choropleth_matplotlib(
 		gdf,
+		column=None,
 		*args,
 		basemap='CartoDB.Positron',
 		zoom='auto',
 		annot=None,
 		legend=True,
+		cmap=None,
 		**kwargs,
 ):
 	"""
@@ -115,37 +118,32 @@ def _choropleth_matplotlib(
 	ax.set_aspect("equal")
 
 	legend_kwds = kwargs.pop('legend_kwds', {})
-	if 'column' in kwargs:
-		if isinstance(kwargs['column'], str):
-			legend_kwds['label'] = kwargs['column']
-		elif hasattr(kwargs['column'], 'name'):
-			legend_kwds['label'] = kwargs['column'].name
-	elif len(args)>0:
-		if isinstance(args[0], str):
-			legend_kwds['label'] = args[0]
-		elif hasattr(args[0], 'name'):
-			legend_kwds['label'] = args[0].name
+	if isinstance(column, str):
+		legend_kwds['label'] = column
+	elif hasattr(column, 'name'):
+		legend_kwds['label'] = column.name
 	if isinstance(legend, str):
 		legend_kwds['label'] = legend
 		legend = True
 
+	if cmap is None:
+		# default cmap is plasma for numeric data
+		try:
+			if pd.api.types.is_numeric_dtype(column):
+				cmap = 'plasma'
+		except:
+			pass
+
 	try:
 		ax = gpd.geodataframe.plot_dataframe(
-			gdf, *args, ax=ax, legend=legend, legend_kwds=legend_kwds,
-			**kwargs
+			gdf, column, *args, ax=ax, legend=legend, legend_kwds=legend_kwds,
+			cmap=cmap, **kwargs
 		)
 	except KeyError:
-		if len(args) > 0:
-			ax = gpd.geodataframe.plot_dataframe(
-				gdf, gdf.eval(args[0]), *args[1:], ax=ax,
-				legend=legend, legend_kwds=legend_kwds, **kwargs
-			)
-		else:
-			column = kwargs.pop('column')
-			ax = gpd.geodataframe.plot_dataframe(
-				gdf, column=gdf.eval(column), ax=ax, legend=legend,
-				legend_kwds=legend_kwds, **kwargs
-			)
+		ax = gpd.geodataframe.plot_dataframe(
+			gdf, gdf.eval(column), *args, ax=ax,
+			legend=legend, legend_kwds=legend_kwds, cmap=cmap, **kwargs
+		)
 	if isinstance(basemap, str):
 		basemap = {'crs': crs, 'tiles':basemap}
 	if basemap is True or basemap is 1:
@@ -348,6 +346,9 @@ def _plotly_choropleth(
 		)
 	if not legend:
 		fig.layout.coloraxis.showscale = False
+	else:
+		if color.name:
+			fig.layout.coloraxis.colorbar.title.text = color.name
 	return fig
 
 _plotly_mapbox_styles = {
@@ -389,6 +390,8 @@ def _folium_choropleth(
 
 	if isinstance(color, str) and legend_name is None:
 		legend_name = color
+	elif hasattr(color, 'name') and legend_name is None:
+		legend_name = color.name
 
 	try:
 		if zoom == 'auto':
@@ -404,6 +407,8 @@ def _folium_choropleth(
 		color.index = color.index.astype(str)
 	elif color in gdf.columns:
 		color = gdf[color]
+		color.index = color.index.astype(str)
+	elif isinstance(color, pd.Series):
 		color.index = color.index.astype(str)
 
 	total_bounds = gdf.total_bounds
