@@ -1,7 +1,10 @@
-
+import ast
+import os
+import numpy as np
 import pandas as pd
 import geopandas as gpd
-from .plotly import plotly_choropleth
+from .plotly import plotly_choropleth, good_zoom
+from plotly import graph_objects as go
 
 import logging
 from .widget_logging import handler
@@ -12,7 +15,7 @@ try:
     from larch import OMX
 except:
     OMX = None
-from ipywidgets import HBox, VBox, Dropdown, Label, HTML, FloatRangeSlider, Layout
+from ipywidgets import HBox, VBox, Dropdown, Label, HTML, FloatRangeSlider, Layout, Text, FloatSlider
 
 
 class OMXBunch(dict):
@@ -25,8 +28,9 @@ class OMXBunch(dict):
             self._add_something(a, mode=mode)
 
     def _add_something(self, s, mode='r', key=''):
-        if isinstance(s, str): # filename
-            self[s] = OMX(s, mode=mode)
+        if isinstance(s, str): # possible filename
+            if os.path.exists(s):
+                self[s] = OMX(s, mode=mode)
         elif isinstance(s, OMX):
             self[s.filename] = s
         elif isinstance(s, dict):
@@ -56,7 +60,7 @@ class OMXViz(VBox):
         giving it here.
     """
 
-    def __init__(self, omx, shapefile):
+    def __init__(self, omx, shapefile, nan_values='', alpha=1.0, ranges=None):
 
         self._initializing = True
         if OMX is None:
@@ -71,6 +75,21 @@ class OMXViz(VBox):
         self.shapefile = shapefile
 
         self.fig = plotly_choropleth(shapefile, color=range(len(shapefile)))
+        nan_zones_trace = plotly_choropleth(shapefile, color=range(len(shapefile))).data[0]
+        nan_zones_trace['coloraxis'] = 'coloraxis2'
+        nan_zones_trace['showscale'] = False
+        nan_zones_trace['colorscale']=[
+            [0.0, f'rgba(0, 0, 0, 0.15)'],
+            [1.0, f'rgba(0, 0, 0, 0.15)'],
+        ]
+        self.fig.add_trace(nan_zones_trace)
+
+        self.fig.add_trace(go.Scattermapbox(
+            mode = "markers",
+            lon = [],
+            lat = [],
+            marker = {'size': 10, 'color':'black', 'symbol':'star'},
+        ))
 
         self.file_dropdown = Dropdown(
             options=list(self.omx_bunch.keys()),
@@ -85,8 +104,10 @@ class OMXViz(VBox):
             layout=Layout(max_width='180px'),
         )
 
+        zone_list = list(self.omx_taz_ids_rows)
+
         self.otaz_dropdown = Dropdown(
-            options=list(self.omx_taz_ids_rows),
+            options=zone_list,
             layout=Layout(max_width='180px'),
         )
 
@@ -101,7 +122,32 @@ class OMXViz(VBox):
             readout_format='.1f',
             layout=Layout(max_width='180px'),
         )
-        self.color_range_data = {}
+        self.color_range_data = ranges or {}
+
+        self.nan_values = Text(
+            value=nan_values,
+            placeholder='Enter NaN Placeholder Values, if any',
+            disabled=False,
+            layout=Layout(max_width='180px'),
+        )
+
+        self.opacity = FloatSlider(
+            value=alpha,
+            min=0,
+            max=1.0,
+            step=0.05,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='.2f',
+            layout=Layout(max_width='180px'),
+        )
+        self.alpha = alpha
+
+        self.taz_highlight = Dropdown(
+            options=[None,]+zone_list,
+            layout=Layout(max_width='180px'),
+        )
 
         self.panel = VBox([
             HTML(
@@ -113,16 +159,27 @@ class OMXViz(VBox):
             self.otaz_dropdown,
             Label("Color Range"),
             self.color_range,
+            Label("Exclude Values"),
+            self.nan_values,
+            Label("Opacity"),
+            self.opacity,
+            Label("Find TAZ"),
+            self.taz_highlight,
         ], layout=Layout(max_width='220px'))
 
         self.matrix_dropdown.observe(self._change_matrix, names='value')
         self.otaz_dropdown.observe(self._change_otaz, names='value')
+        self.taz_highlight.observe(self._change_highlight_taz, names='value')
+        self.nan_values.observe(self._change_nan_values, names='value')
+        self.opacity.observe(self._change_alpha_value, names='value')
         self.color_range.observe(self.change_color_range, names='value')
         self.file_dropdown.observe(self.change_omx_file, names='value')
         self.fig.data[0].on_click(self._set_otaz_by_click)
+        self.fig.data[1].on_click(self._set_otaz_by_click)
 
         self.matrix_name = None
         self.otaz = None
+        self.nan_values_str = nan_values
 
         with self.fig.batch_update():
             self.change_view(
@@ -152,6 +209,7 @@ class OMXViz(VBox):
             self.footer,
         ))
         self._initializing = False
+        self.change_view(force=True)
 
     def _set_otaz_by_click(self, trace, points, selector):
         try:
@@ -169,7 +227,36 @@ class OMXViz(VBox):
     def _change_otaz(self, payload):
         self.change_view(otaz=payload['new'])
 
-    def change_view(self, matrix_name=None, otaz=None, force=False):
+    def _change_highlight_taz(self, payload):
+        if payload['new'] is None:
+            lat, lon = [], []
+            zoom = None
+        else:
+            just_this_taz = self.shapefile.loc[[payload['new']]].to_crs(epsg=4326)
+            c = just_this_taz['geometry'].representative_point()
+            zoom = good_zoom(just_this_taz)
+            lat, lon = float(c.y), float(c.x)
+        with self.fig.batch_update():
+            self.fig.data[2]['lat'] = [lat]
+            self.fig.data[2]['lon'] = [lon]
+            self.fig.data[2]['hovertext'] = f"TAZ {payload['new']}"
+            self.fig.data[2]['hoverinfo'] = "text"
+            self.fig.update_layout(
+                mapbox_center_lat=lat,
+                mapbox_center_lon=lon,
+            )
+            if zoom is not None:
+                self.fig.update_layout(
+                    mapbox_zoom=zoom,
+                )
+
+    def _change_nan_values(self, payload):
+        self.change_view(nan_values=payload['new'])
+
+    def _change_alpha_value(self, payload):
+        self.change_view(alpha=payload['new'])
+
+    def change_view(self, matrix_name=None, otaz=None, nan_values=None, alpha=None, force=False):
 
         try:
             logger.critical(f"change_view matrix_name={matrix_name}, otaz={otaz}")
@@ -180,6 +267,12 @@ class OMXViz(VBox):
                 do_update = True
             if otaz is not None and otaz != self.otaz:
                 self.otaz = otaz
+                do_update = True
+            if nan_values is not None and nan_values != self.nan_values_str:
+                self.nan_values_str = nan_values
+                do_update = True
+            if alpha is not None and alpha != self.alpha:
+                self.alpha = alpha
                 do_update = True
 
             if do_update:
@@ -196,15 +289,65 @@ class OMXViz(VBox):
                     left_index=True, right_index=True, how='left'
                 )
 
+                nans_str = self.nan_values_str
+                if nans_str:
+                    if nans_str[:2] == ">=":
+                        nans = ast.literal_eval(nans_str[2:])
+                        is_nans = skim_pull[uid] >= nans
+                        skim_pull.loc[is_nans, uid] = np.nan
+                    elif nans_str[:2] == "<=":
+                        nans = ast.literal_eval(nans_str[2:])
+                        is_nans = skim_pull[uid] <= nans
+                        skim_pull.loc[is_nans, uid] = np.nan
+                    elif nans_str[0] == ">":
+                        nans = ast.literal_eval(nans_str[1:])
+                        is_nans = skim_pull[uid] > nans
+                        skim_pull.loc[is_nans, uid] = np.nan
+                    elif nans_str[0] == "<":
+                        nans = ast.literal_eval(nans_str[1:])
+                        is_nans = skim_pull[uid] < nans
+                        skim_pull.loc[is_nans, uid] = np.nan
+                    else:
+                        if "," in nans_str:
+                            nans = ast.literal_eval(nans_str)
+                        else:
+                            nans = [ast.literal_eval(nans_str)]
+                        is_nans = skim_pull[uid].isin(nans)
+                        skim_pull.loc[is_nans, uid] = np.nan
+
                 with self.fig.batch_update():
+                    self.fig.layout.coloraxis.colorscale = [
+                        [0.0,                f'rgba(13 , 8  , 135, {self.alpha:0.2f})'],
+                        [0.1111111111111111, f'rgba(70 , 3  , 159, {self.alpha:0.2f})'],
+                        [0.2222222222222222, f'rgba(114, 1  , 168, {self.alpha:0.2f})'],
+                        [0.3333333333333333, f'rgba(156, 23 , 158, {self.alpha:0.2f})'],
+                        [0.4444444444444444, f'rgba(189, 55 , 134, {self.alpha:0.2f})'],
+                        [0.5555555555555556, f'rgba(216, 87 , 107, {self.alpha:0.2f})'],
+                        [0.6666666666666666, f'rgba(237, 121, 83 , {self.alpha:0.2f})'],
+                        [0.7777777777777778, f'rgba(251, 159, 58 , {self.alpha:0.2f})'],
+                        [0.8888888888888888, f'rgba(253, 202, 38 , {self.alpha:0.2f})'],
+                        [1.0,                f'rgba(240, 249, 33 , {self.alpha:0.2f})'],
+                    ]
                     self.fig.data[0].z = skim_pull[uid]
+                    na = skim_pull[uid].isna()
+                    na[~na] = np.nan
+                    self.fig.data[1].z = na
+                    self.fig.data[1]['hovertemplate'] = "TAZ %{location}<extra>Not Valid</extra>"
                     self.fig.layout.coloraxis.colorbar.title.text = self.matrix_name
                     if len(self.matrix_name) > 12:
                         self.fig.layout.coloraxis.colorbar.title.side = 'right'
                     else:
                         self.fig.layout.coloraxis.colorbar.title.side = 'top'
                     self.fig.layout.coloraxis.showscale = True
-
+                    try:
+                        self.fig.layout.coloraxis2 = {}
+                        self.fig.layout.coloraxis2.colorscale = [
+                            [0.0, f'rgba(0, 0, 0, 0.15)'],
+                            [1.0, f'rgba(0, 0, 0, 0.15)'],
+                        ]
+                        self.fig.layout.coloraxis2.showscale = False
+                    except AttributeError:
+                        pass
 
         except:
             logger.exception("error in change_view")

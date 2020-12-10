@@ -19,10 +19,11 @@ from .plotly import plotly_choropleth, plotly_scatter, plotly_heatmap, plotly_li
 from .plotting.choropleth import choropleth
 from . import caching
 from .dotdensity import generate_points_in_areas
-from .simple import centroid_internal, make_points_geodataframe
+from .simple import centroid_internal, make_points_geodataframe, make_pointpairs_geodataframe
 from .gdf_viewer import GeoDataFrameViz as Viz
 from .omx_viewer import OMXViz
 from .util import what
+from .nearest_points import nearest_points
 from geopandas import GeoDataFrame, GeoSeries
 
 __version__ = "20.4.2"

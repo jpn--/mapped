@@ -60,3 +60,5 @@ def what(filename, geopandas='geopandas'):
 		for dirpath, dirnames, filenames in os.walk(filename):
 			for subfilename in filenames:
 				what(os.path.join(dirpath, subfilename), geopandas=geopandas)
+			for subdirname in dirnames:
+				what(os.path.join(dirpath, subdirname), geopandas=geopandas)

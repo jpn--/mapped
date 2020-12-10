@@ -290,7 +290,7 @@ def _plot_with_basemap(self, *args, basemap=False, **kwargs, ):
 			ax = gpd.geodataframe.plot_dataframe(self, column=self.eval(column), ax=ax, **kwargs)
 	if isinstance(basemap, str):
 		basemap = {'crs': crs, 'tiles':basemap}
-	if basemap is True or basemap is 1:
+	if basemap is True or basemap == 1:
 		basemap = {'crs': crs}
 	if basemap:
 		ax = add_basemap( ax, **basemap )
@@ -349,7 +349,7 @@ def _plot_series_with_basemap(self, *args, basemap=False, **kwargs, ):
 	ax = gpd.geoseries.plot_series(self, *args, **kwargs)
 	if isinstance(basemap, str):
 		basemap = {'crs': crs, 'tiles':basemap}
-	if basemap is True or basemap is 1:
+	if basemap is True or basemap == 1:
 		basemap = {'crs': crs}
 	if basemap:
 		if 'crs' not in basemap:

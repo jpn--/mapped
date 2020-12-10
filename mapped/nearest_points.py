@@ -1,10 +1,6 @@
 
-# from  https://gis.stackexchange.com/a/301935
+# lightly edited from https://gis.stackexchange.com/a/301935
 
-import geopandas as gpd
-import numpy as np
-import pandas as pd
-from scipy.spatial import cKDTree
 
 # from shapely.geometry import Point
 # gpd1 = gpd.GeoDataFrame([['John', 1, Point(1, 1)], ['Smith', 1, Point(2, 2)],
@@ -31,14 +27,27 @@ def nearest_points(sources, targets):
     Returns
     -------
     geopandas.GeoDataFrame
+        The resulting GeoDataFrame has all columns from both
+        `source` and `target`, and is indexed-alike as `source`.
     """
+    import geopandas as gpd
+    import numpy as np
+    import pandas as pd
+    from scipy.spatial import cKDTree
+
+    targets = targets.to_crs(sources.crs).reset_index(drop=True)
     nA = np.array(list(zip(sources.geometry.x, sources.geometry.y)))
     nB = np.array(list(zip(targets.geometry.x, targets.geometry.y)))
     btree = cKDTree(nB)
     dist, idx = btree.query(nA, k=1)
     gdf = pd.concat(
-        [sources.reset_index(drop=True), targets.loc[idx, targets.columns != 'geometry'].reset_index(drop=True),
-         pd.Series(dist, name='dist')], axis=1)
+        [
+            sources.reset_index(drop=True),
+            targets.loc[idx, targets.columns != 'geometry'].reset_index(drop=True),
+            pd.Series(dist, name='dist')
+        ],
+        axis=1)
+    gdf.index = sources.index
     return gdf
 
 # nearest_points(gpd1, gpd2)

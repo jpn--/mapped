@@ -146,7 +146,7 @@ def _choropleth_matplotlib(
 		)
 	if isinstance(basemap, str):
 		basemap = {'crs': crs, 'tiles':basemap}
-	if basemap is True or basemap is 1:
+	if basemap is True or basemap == 1:
 		basemap = {'crs': crs}
 	if basemap:
 		ax = add_basemap( ax, zoom=zoom, **basemap )
@@ -175,6 +175,8 @@ def _plotly_choropleth(
 		text=None,
 		figsize=None,
 		legend=True,
+		color_min=None,
+		color_max=None,
 		**kwargs,
 ):
 	"""
@@ -298,6 +300,13 @@ def _plotly_choropleth(
 	if isinstance(color, str) and color not in gdf_p.columns:
 		color_str = color
 		color = gdf_p.eval(color).rename(color_str)
+	elif isinstance(color, str) and color in gdf_p.columns:
+		color = gdf_p[color]
+
+	if color_min is None and color_max is not None:
+		color_min = color.min()
+	if color_min is not None and color_max is None:
+		color_max = color.max()
 
 	px_choropleth = px.choropleth_mapbox(
 		gdf_p,
@@ -317,16 +326,19 @@ def _plotly_choropleth(
 			fig.update_layout(margin={"r": margins, "t": margins, "l": margins, "b": margins})
 		elif margins is not None:
 			fig.update_layout(margin=margins)
+		if color_min is not None or color_max is not None:
+			fig.update_layout(coloraxis_cmin=color_min, coloraxis_cmax=color_max)
 		if figsize is not None:
 			fig.update_layout(
 				autosize=False,
 				width=figsize[0]*DPI,
 				height=figsize[1]*DPI,
 			)
-
 		fig._perform_plotly_relayout = lambda y: plotly._perform_plotly_relayout(fig, y)
 	else:
 		fig.add_traces(px_choropleth.data)
+		if color_min is not None or color_max is not None:
+			fig.update_layout(coloraxis_cmin=color_min, coloraxis_cmax=color_max)
 
 	if text is not None:
 		if isinstance(text, str):
@@ -385,6 +397,8 @@ def _folium_choropleth(
 		line_color='black',
 		hover_line_color='blue',
 		tooltip_fields = None,
+		color_min=None,
+		color_max=None,
 ):
 	import folium
 
@@ -425,8 +439,8 @@ def _folium_choropleth(
 	from branca import colormap
 
 	colormapper = colormap.linear.viridis.scale(
-		color.min(),
-		color.max(),
+		color.min() if color_min is None else color_min,
+		color.max() if color_max is None else color_max,
 	)
 	if legend_name:
 		colormapper.caption = legend_name
@@ -498,6 +512,8 @@ def choropleth(
 		fig=None,
 		color=None,
 		opacity=1.0,
+		color_min=None,
+		color_max=None,
 		text=None,
 		basemap=True,
 		zoom='auto',
@@ -582,6 +598,8 @@ def choropleth(
 			annot=text,
 			ax=ax,
 			alpha=opacity,
+			vmin=color_min,
+			vmax=color_max,
 			**kwargs,
 		)
 	elif engine == 'plotly':
@@ -594,6 +612,8 @@ def choropleth(
 			text=text,
 			fig=ax,
 			opacity=opacity,
+			color_min=color_min,
+			color_max=color_max,
 			**kwargs,
 		)
 	elif engine == 'folium':
@@ -606,6 +626,8 @@ def choropleth(
 			zoom=zoom,
 			tiles=basemap,
 			ax=ax,
+			color_min=color_min,
+			color_max=color_max,
 		)
 	else:
 		raise ValueError(f"mapping engine '{engine}' not found")

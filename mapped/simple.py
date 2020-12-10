@@ -37,8 +37,40 @@ def make_points_geodataframe(df, lat, lon):
 			df[lat],
 		),
 		data=df,
-		crs={'init': 'epsg:4326'}
+		crs='EPSG:4326',
 	)
+
+def make_pointpairs_geodataframe(df, olat, olon, dlat, dlon):
+
+	"""
+	Create a GeoDataFrame from a DataFrame that has two pairs of lat and lon columns.
+
+	Parameters
+	----------
+	df : DataFrame
+	olat, olon, dlat, dlon : str
+		The column names containing latitude and longitude of origin and destination.
+	"""
+	from shapely.geometry.multipoint import MultiPoint
+	vectors = [
+		MultiPoint([p0, p1])
+		for p0, p1 in zip(
+			gpd.points_from_xy(
+				df[olon],
+				df[olat],
+			),
+			gpd.points_from_xy(
+				df[dlon],
+				df[dlat],
+			)
+		)
+	]
+	return gpd.GeoDataFrame(
+		geometry=vectors,
+		data=df,
+		crs='EPSG:4326',
+	)
+
 
 def annotate_map(ax, gdf, annot, row_slice=slice(None), **kwargs):
 	"""

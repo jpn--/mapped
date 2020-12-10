@@ -852,7 +852,6 @@ def make_plotly(gdf):
 		else:
 			m = plotly_choropleth(
 				gdf,
-				line_width=2,
 			)
 		return m
 
