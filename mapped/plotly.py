@@ -142,6 +142,7 @@ def plotly_choropleth(
 		center=None,
 		opacity=1.0,
 		text=None,
+		coloraxis=None,
 		**kwargs,
 ):
 	"""
@@ -284,6 +285,8 @@ def plotly_choropleth(
 			fig.update_layout(margin=margins)
 		fig._perform_plotly_relayout = lambda y: _perform_plotly_relayout(fig, y)
 	else:
+		if coloraxis is not None:
+			px_choropleth.update_traces(coloraxis=coloraxis)
 		fig.add_traces(px_choropleth.data)
 
 	if text is not None:

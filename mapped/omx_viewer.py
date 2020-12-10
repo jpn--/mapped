@@ -15,7 +15,7 @@ try:
     from larch import OMX
 except:
     OMX = None
-from ipywidgets import HBox, VBox, Dropdown, Label, HTML, FloatRangeSlider, Layout, Text, FloatSlider
+from ipywidgets import HBox, VBox, Dropdown, Label, HTML, FloatRangeSlider, Layout, Text, FloatSlider, RadioButtons
 
 
 class OMXBunch(dict):
@@ -75,14 +75,13 @@ class OMXViz(VBox):
         self.shapefile = shapefile
 
         self.fig = plotly_choropleth(shapefile, color=range(len(shapefile)))
-        nan_zones_trace = plotly_choropleth(shapefile, color=range(len(shapefile))).data[0]
-        nan_zones_trace['coloraxis'] = 'coloraxis2'
-        nan_zones_trace['showscale'] = False
-        nan_zones_trace['colorscale']=[
+        plotly_choropleth(shapefile, color=range(len(shapefile)), fig=self.fig, coloraxis='coloraxis2')
+        self.fig.data[-1]['showscale'] = False
+        self.fig.data[-1]['colorscale']=[
             [0.0, f'rgba(0, 0, 0, 0.15)'],
             [1.0, f'rgba(0, 0, 0, 0.15)'],
         ]
-        self.fig.add_trace(nan_zones_trace)
+        self.fig.data[-1]['hovertemplate'] = "TAZ %{location}<extra>Not Valid</extra>"
 
         self.fig.add_trace(go.Scattermapbox(
             mode = "markers",
@@ -149,13 +148,19 @@ class OMXViz(VBox):
             layout=Layout(max_width='180px'),
         )
 
+        self.direction_mode_radio = RadioButtons(
+            options=['Origin TAZ', 'Destination TAZ'],
+            value='Origin TAZ',
+            layout=Layout(max_width='180px'),
+        )
+
         self.panel = VBox([
             HTML(
                 value="<hr>",
             ),
             Label("Matrix Table"),
             self.matrix_dropdown,
-            Label("Origin TAZ"),
+            self.direction_mode_radio,
             self.otaz_dropdown,
             Label("Color Range"),
             self.color_range,
@@ -169,6 +174,7 @@ class OMXViz(VBox):
 
         self.matrix_dropdown.observe(self._change_matrix, names='value')
         self.otaz_dropdown.observe(self._change_otaz, names='value')
+        self.direction_mode_radio.observe(self._change_direction_mode, names='value')
         self.taz_highlight.observe(self._change_highlight_taz, names='value')
         self.nan_values.observe(self._change_nan_values, names='value')
         self.opacity.observe(self._change_alpha_value, names='value')
@@ -180,6 +186,7 @@ class OMXViz(VBox):
         self.matrix_name = None
         self.otaz = None
         self.nan_values_str = nan_values
+        self.direction_mode = self.direction_mode_radio.value
 
         with self.fig.batch_update():
             self.change_view(
@@ -209,7 +216,11 @@ class OMXViz(VBox):
             self.footer,
         ))
         self._initializing = False
+        self._change_highlight_taz({'new':None})
+        self.fig._send_relayout_msg({})
+        self.fig._dispatch_layout_change_callbacks({})
         self.change_view(force=True)
+
 
     def _set_otaz_by_click(self, trace, points, selector):
         try:
@@ -226,29 +237,53 @@ class OMXViz(VBox):
 
     def _change_otaz(self, payload):
         self.change_view(otaz=payload['new'])
+        self._change_highlight_taz({'new':self.taz_highlight.value})
+
+    def _change_direction_mode(self, payload):
+        self.change_view(direction_mode=payload['new'])
 
     def _change_highlight_taz(self, payload):
+        just_otaz = self.shapefile.loc[[self.otaz]].to_crs(epsg=4326)
+        c = just_otaz['geometry'].representative_point()
+        lat, lon = [float(c.y)], [float(c.x)]
+
         if payload['new'] is None:
-            lat, lon = [], []
             zoom = None
         else:
             just_this_taz = self.shapefile.loc[[payload['new']]].to_crs(epsg=4326)
             c = just_this_taz['geometry'].representative_point()
-            zoom = good_zoom(just_this_taz)
-            lat, lon = float(c.y), float(c.x)
+            zoom = good_zoom(just_this_taz)-3
+            lat.append(float(c.y))
+            lon.append(float(c.x))
+
         with self.fig.batch_update():
-            self.fig.data[2]['lat'] = [lat]
-            self.fig.data[2]['lon'] = [lon]
-            self.fig.data[2]['hovertext'] = f"TAZ {payload['new']}"
+            self.fig.data[2]['lat'] = lat
+            self.fig.data[2]['lon'] = lon
             self.fig.data[2]['hoverinfo'] = "text"
-            self.fig.update_layout(
-                mapbox_center_lat=lat,
-                mapbox_center_lon=lon,
-            )
-            if zoom is not None:
+
+            if len(lat) == 1:
+                self.fig.data[2]['hovertext'] = f"TAZ {self.otaz}"
+                self.fig.data[2]['marker'] = {
+                    'size': 10, 'color': 'black',
+                    'symbol': 'star'
+                }
+            else:
+                self.fig.data[2]['hovertext'] = [
+                    f"TAZ {self.otaz} (Origin)",
+                    f"TAZ {payload['new']}",
+                ]
+                self.fig.data[2]['marker'] = {
+                    'size': 10, 'color': 'black',
+                    'symbol': ['star','circle'],
+                }
                 self.fig.update_layout(
-                    mapbox_zoom=zoom,
+                    mapbox_center_lat=lat[-1],
+                    mapbox_center_lon=lon[-1],
                 )
+                if zoom is not None:
+                    self.fig.update_layout(
+                        mapbox_zoom=zoom,
+                    )
 
     def _change_nan_values(self, payload):
         self.change_view(nan_values=payload['new'])
@@ -256,10 +291,18 @@ class OMXViz(VBox):
     def _change_alpha_value(self, payload):
         self.change_view(alpha=payload['new'])
 
-    def change_view(self, matrix_name=None, otaz=None, nan_values=None, alpha=None, force=False):
+    def change_view(
+            self,
+            matrix_name=None,
+            otaz=None,
+            nan_values=None,
+            alpha=None,
+            direction_mode=None,
+            force=False,
+    ):
 
         try:
-            logger.critical(f"change_view matrix_name={matrix_name}, otaz={otaz}")
+            logger.debug(f"change_view matrix_name={matrix_name}, otaz={otaz}")
             do_update = force
 
             if matrix_name is not None and matrix_name != self.matrix_name:
@@ -274,6 +317,9 @@ class OMXViz(VBox):
             if alpha is not None and alpha != self.alpha:
                 self.alpha = alpha
                 do_update = True
+            if direction_mode is not None and direction_mode != self.direction_mode:
+                self.direction_mode = direction_mode
+                do_update = True
 
             if do_update:
                 skim_data = pd.DataFrame(
@@ -284,10 +330,16 @@ class OMXViz(VBox):
 
                 uid = "uid_____"
 
-                skim_pull = pd.merge(
-                    self.shapefile, skim_data.loc[self.otaz].rename(uid),
-                    left_index=True, right_index=True, how='left'
-                )
+                if self.direction_mode == 'Origin TAZ':
+                    skim_pull = pd.merge(
+                        self.shapefile, skim_data.loc[self.otaz].rename(uid),
+                        left_index=True, right_index=True, how='left'
+                    )
+                else:
+                    skim_pull = pd.merge(
+                        self.shapefile, skim_data.loc[:,self.otaz].rename(uid),
+                        left_index=True, right_index=True, how='left'
+                    )
 
                 nans_str = self.nan_values_str
                 if nans_str:
@@ -340,7 +392,6 @@ class OMXViz(VBox):
                         self.fig.layout.coloraxis.colorbar.title.side = 'top'
                     self.fig.layout.coloraxis.showscale = True
                     try:
-                        self.fig.layout.coloraxis2 = {}
                         self.fig.layout.coloraxis2.colorscale = [
                             [0.0, f'rgba(0, 0, 0, 0.15)'],
                             [1.0, f'rgba(0, 0, 0, 0.15)'],
