@@ -25,7 +25,10 @@ class OMXBunch(dict):
             raise ModuleNotFoundError('larch.omx')
         super().__init__()
         for a in args:
-            self._add_something(a, mode=mode)
+            try:
+                self._add_something(a, mode=mode)
+            except TypeError:
+                pass
 
     def _add_something(self, s, mode='r', key=''):
         if isinstance(s, str): # possible filename
@@ -217,8 +220,7 @@ class OMXViz(VBox):
         ))
         self._initializing = False
         self._change_highlight_taz({'new':None})
-        self.fig._send_relayout_msg({})
-        self.fig._dispatch_layout_change_callbacks({})
+        self.fig.update_layout(showlegend = False)
         self.change_view(force=True)
 
 
@@ -343,29 +345,40 @@ class OMXViz(VBox):
 
                 nans_str = self.nan_values_str
                 if nans_str:
-                    if nans_str[:2] == ">=":
-                        nans = ast.literal_eval(nans_str[2:])
-                        is_nans = skim_pull[uid] >= nans
-                        skim_pull.loc[is_nans, uid] = np.nan
-                    elif nans_str[:2] == "<=":
-                        nans = ast.literal_eval(nans_str[2:])
-                        is_nans = skim_pull[uid] <= nans
-                        skim_pull.loc[is_nans, uid] = np.nan
-                    elif nans_str[0] == ">":
-                        nans = ast.literal_eval(nans_str[1:])
-                        is_nans = skim_pull[uid] > nans
-                        skim_pull.loc[is_nans, uid] = np.nan
-                    elif nans_str[0] == "<":
-                        nans = ast.literal_eval(nans_str[1:])
-                        is_nans = skim_pull[uid] < nans
-                        skim_pull.loc[is_nans, uid] = np.nan
-                    else:
-                        if "," in nans_str:
-                            nans = ast.literal_eval(nans_str)
+
+                    def _interpret(s):
+                        if s[:2] == ">=":
+                            nans = ast.literal_eval(s[2:])
+                            return skim_pull[uid] >= nans
+                        elif s[:2] == "<=":
+                            nans = ast.literal_eval(s[2:])
+                            return skim_pull[uid] <= nans
+                        elif s[0] == ">":
+                            nans = ast.literal_eval(s[1:])
+                            return skim_pull[uid] > nans
+                        elif s[0] == "<":
+                            nans = ast.literal_eval(s[1:])
+                            return skim_pull[uid] < nans
                         else:
-                            nans = [ast.literal_eval(nans_str)]
-                        is_nans = skim_pull[uid].isin(nans)
-                        skim_pull.loc[is_nans, uid] = np.nan
+                            if "," in s:
+                                nans = ast.literal_eval(s)
+                            else:
+                                nans = [ast.literal_eval(s)]
+                            return skim_pull[uid].isin(nans)
+
+                    if "&" in nans_str:
+                        ss = nans_str.split("&")
+                        is_nans = _interpret(ss[0])
+                        for s in ss[1:]:
+                            is_nans &= _interpret(s)
+                    elif "|" in nans_str:
+                        ss = nans_str.split("|")
+                        is_nans = _interpret(ss[0])
+                        for s in ss[1:]:
+                            is_nans |= _interpret(s)
+                    else:
+                        is_nans = _interpret(nans_str)
+                    skim_pull.loc[is_nans, uid] = np.nan
 
                 with self.fig.batch_update():
                     self.fig.layout.coloraxis.colorscale = [
@@ -445,3 +458,40 @@ class OMXViz(VBox):
             else:
                 self.matrix_dropdown.value = next(iter(self.omx.data._v_children))
             self.change_view(force=True)
+
+    def add_lines(self, gdf):
+        """
+        Add a GeoDataFrame of MultiPoints
+
+        Parameters
+        ----------
+        gdf : GeoDataFrame
+        """
+
+        # filter gdf for MultiPoint geometries
+        import shapely.geometry.multipoint
+        mps = gdf['geometry'].apply(lambda y: isinstance(y, shapely.geometry.multipoint.MultiPoint))
+
+        gdf = gdf[mps].to_crs(epsg=4326)
+        lons = np.empty(3 * len(gdf))
+        lons[::3] = gdf['geometry'].apply(lambda j: j[0].x)
+        lons[1::3] = gdf['geometry'].apply(lambda j: j[-1].x)
+        lons[2::3] = None
+        lats = np.empty(3 * len(gdf))
+        lats[::3] = gdf['geometry'].apply(lambda j: j[0].y)
+        lats[1::3] = gdf['geometry'].apply(lambda j: j[-1].y)
+        lats[2::3] = None
+        mark_sizes = np.zeros(3 * len(gdf), dtype=int)
+        mark_sizes[::3] = 0
+        mark_sizes[1::3] = 8
+        self.fig.add_trace(
+            go.Scattermapbox(
+                lon=lons,
+                lat=lats,
+                mode='lines+markers',
+                line=dict(width=1, color='black'),
+                opacity=0.75,
+                marker=dict(size=mark_sizes)
+            )
+        )
+

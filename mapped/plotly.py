@@ -833,7 +833,7 @@ gpd.GeoDataFrame.plotly_lines = plotly_lines
 
 
 
-def make_plotly(gdf):
+def make_plotly(gdf, **kwargs):
 	"""
 	A quick and dirty dynamic map to review data.
 
@@ -850,11 +850,11 @@ def make_plotly(gdf):
 		import shapely.geometry.point
 		if isinstance(gdf.iloc[0].geometry, shapely.geometry.point.Point):
 			m = plotly_heatmap(
-				gdf
+				gdf, **kwargs,
 			)
 		else:
 			m = plotly_choropleth(
-				gdf,
+				gdf, **kwargs,
 			)
 		return m
 

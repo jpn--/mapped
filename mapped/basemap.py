@@ -298,7 +298,7 @@ def _plot_with_basemap(self, *args, basemap=False, **kwargs, ):
 		ax.crs = crs
 	return ax
 
-gpd.GeoDataFrame.plot = _plot_with_basemap
+gpd.GeoDataFrame.map = _plot_with_basemap
 
 def _plot_series_with_basemap(self, *args, basemap=False, **kwargs, ):
 	"""
@@ -359,4 +359,4 @@ def _plot_series_with_basemap(self, *args, basemap=False, **kwargs, ):
 		ax.crs = crs
 	return ax
 
-gpd.GeoSeries.plot = _plot_series_with_basemap
+gpd.GeoSeries.map = _plot_series_with_basemap
